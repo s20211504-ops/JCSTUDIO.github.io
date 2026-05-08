@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rivals: World Combat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #020617; font-family: 'Inter', sans-serif; color: white; user-select: none; touch-action: none; }
+        canvas { display: block; }
+        .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, #0f172a 0%, #020617 100%); z-index: 100; }
+        .btn { background: #22d3ee; color: #0891b2; padding: 1rem 2.5rem; font-weight: 900; font-size: 1.2rem; border-radius: 0.75rem; cursor: pointer; transition: all 0.2s; text-transform: uppercase; border: none; box-shadow: 0 0 20px rgba(34, 211, 238, 0.3); }
+        .btn:hover { transform: scale(1.05); background: white; }
+        .btn-fight { background: #f43f5e; color: #4c0519; font-size: 2rem; padding: 1.5rem 4rem; box-shadow: 0 0 30px rgba(244, 63, 94, 0.5); }
+        .btn-fight:hover { background: #fb7185; }
+        .btn-god { background: #fbbf24; color: #78350f; font-size: 0.75rem; padding: 0.5rem 1rem; margin-top: 10px; border: 2px solid #78350f; box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); }
+        .hidden { display: none !important; }
+        
+        /* Layouts */
+        .grid-layout { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; width: 1100px; max-width: 95vw; max-height: 50vh; overflow-y: auto; padding: 1.5rem; scrollbar-width: thin; }
+        .card { background: rgba(30, 41, 59, 0.4); border: 2px solid rgba(255, 255, 255, 0.05); padding: 0.75rem; border-radius: 1rem; cursor: pointer; transition: all 0.2s; position: relative; }
+        .card.selected { border-color: #22d3ee; background: rgba(34, 211, 238, 0.1); }
+        
+        /* HUD */
+        #hud { position: absolute; top: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 30px; pointer-events: none; z-index: 10; }
+        .health-container { width: 200px; height: 14px; background: rgba(15, 23, 42, 0.8); border-radius: 4px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .hp-fill { height: 100%; transition: width 0.3s ease; }
+        
+        /* Mobile */
+        .joystick-base { position: absolute; bottom: 60px; left: 60px; width: 140px; height: 140px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.1); border-radius: 50%; pointer-events: auto; }
+        .joystick-stick { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: #22d3ee; border-radius: 50%; transform: translate(-50%, -50%); }
+    </style>
+</head>
+<body>
+
+    <!-- LOBBY SCREEN -->
+    <div id="lobby" class="screen">
+        <h1 class="text-8xl font-black italic mb-2 text-cyan-400 tracking-tighter drop-shadow-[0_0_20px_rgba(34,211,238,0.5)]">RIVALS</h1>
+        <p class="text-rose-500 uppercase text-sm mb-12 tracking-[0.8em] font-bold">World Combat Evolved</p>
+        
+        <div class="flex flex-col gap-6 items-center">
+            <button class="btn btn-fight animate-bounce" onclick="startGame()">FIGHT!</button>
+            
+            <div class="flex gap-4">
+                <button class="btn !text-sm !py-3" onclick="showMapSelect()">Change Map</button>
+                <button class="btn !bg-fuchsia-500 !text-fuchsia-950 !text-sm !py-3" onclick="showP2Options()">Versus Mode</button>
+                <button class="btn !bg-amber-400 !text-amber-900 !text-sm !py-3" onclick="showShop()">Hangar</button>
+            </div>
+
+            <div class="flex flex-col gap-2 items-center mt-4">
+                <div class="bg-slate-900/80 px-6 py-2 rounded-lg border border-white/10">
+                    <span class="text-xs text-slate-500 uppercase font-bold mr-2">Credits:</span>
+                    <span id="score-val" class="text-xl font-black text-white">0</span>
+                </div>
+                <div class="flex gap-2">
+                    <div id="toggle-ipad" class="text-[11px] font-bold text-white border border-white/20 px-4 py-2 rounded-lg bg-slate-800 cursor-pointer" onclick="toggleiPadMode()">
+                        TOUCH: <span id="ipad-status">OFF</span>
+                    </div>
+                    <button class="btn btn-god" onclick="giveNonillion()">GET 1 NONILLION</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAP SELECTION -->
+    <div id="map-select" class="screen hidden">
+        <h2 class="text-4xl font-black mb-4 italic text-cyan-400">SELECT WORLD</h2>
+        <div id="map-grid" class="grid-layout bg-slate-900/50 border border-white/5 rounded-2xl"></div>
+        <button class="mt-6 btn !bg-slate-700 !text-white" onclick="showLobby()">Confirm</button>
+    </div>
+
+    <!-- SHOP -->
+    <div id="shop" class="screen hidden">
+        <h2 class="text-4xl font-black mb-4 italic text-amber-400">SELECT YOUR TANK</h2>
+        <div id="unit-grid" class="grid-layout bg-slate-900/50 border border-white/5 rounded-2xl"></div>
+        <button class="mt-6 btn !bg-slate-700 !text-white" onclick="showLobby()">Confirm</button>
+    </div>
+
+    <!-- P2 MODES -->
+    <div id="p2-options" class="screen hidden">
+        <h2 class="text-4xl font-black mb-8 italic text-fuchsia-400">RIVALS DUEL</h2>
+        <div class="flex gap-6">
+            <button class="btn !bg-cyan-500 !text-cyan-950" onclick="setMode(2, 'coop')">Co-Op Campaign</button>
+            <button class="btn !bg-rose-500 !text-rose-950" onclick="setMode(2, 'versus')">1v1 Combat</button>
+        </div>
+        <button class="mt-8 text-slate-400 uppercase text-sm font-bold tracking-widest hover:text-white" onclick="showLobby()">Back</button>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+        <div class="flex flex-col gap-3">
+            <div id="p1-hud">
+                <div class="health-container"><div id="p1-hp" class="hp-fill bg-cyan-400" style="width: 100%"></div></div>
+                <div class="text-[10px] text-cyan-400 font-bold uppercase mt-1">Rival 1: Pilot</div>
+            </div>
+            <div id="p2-hud" class="hidden">
+                <div class="health-container"><div id="p2-hp" class="hp-fill bg-fuchsia-400" style="width: 100%"></div></div>
+                <div class="text-[10px] text-fuchsia-400 font-bold uppercase mt-1">Rival 2: Guest</div>
+            </div>
+        </div>
+        <div class="text-center">
+            <div id="timer-display" class="text-4xl font-black text-white/50">01:30</div>
+            <div id="status-text" class="text-rose-500 font-bold text-[10px] uppercase">Eliminate Target</div>
+        </div>
+        <div class="text-right">
+            <div id="session-score" class="text-3xl font-black text-white">+0</div>
+            <div class="text-[10px] text-slate-500 uppercase font-bold">Current Payday</div>
+        </div>
+    </div>
+
+    <!-- MOBILE OVERLAY -->
+    <div id="mobile-overlay" class="hidden pointer-events-none absolute inset-0 z-50">
+        <div id="joy-base" class="joystick-base pointer-events-auto"><div id="joy-stick" class="joystick-stick"></div></div>
+        <div class="absolute bottom-16 right-16 flex flex-col gap-4 pointer-events-auto">
+            <button id="mobile-ult" class="w-20 h-20 rounded-full bg-amber-500/30 border-4 border-amber-500 text-amber-500 font-black">ULT</button>
+            <button id="mobile-atk" class="w-28 h-28 rounded-full bg-rose-500/30 border-4 border-rose-500 text-rose-500 font-black">FIRE</button>
+        </div>
+    </div>
+
+    <!-- END SCREEN -->
+    <div id="end-screen" class="screen hidden">
+        <h2 id="end-title" class="text-8xl font-black italic text-cyan-400">COMBAT OVER</h2>
+        <p id="reward-text" class="text-white text-3xl font-bold mt-4">+0 CREDITS</p>
+        <button class="btn mt-8" onclick="showLobby()">Back to HQ</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameActive = false, totalScore = 0, sessionPoints = 0, playerCount = 1, gameSubMode = 'coop';
+        let gameTime = 90, lastTimeUpdate = 0;
+        let p1, p2, enemies = [], bullets = [], particles = [], obstacles = [];
+        let camera = { x: 0, y: 0 };
+        let currentUnit = 'scout', currentMap = 'default';
+        let ownedUnits = { 'scout': true };
+        let isIPadMode = false;
+        
+        const keys = {};
+        const mouse = { x: 0, y: 0, left: false };
+        const joy = { active: false, startX: 0, startY: 0, vx: 0, vy: 0 };
+
+        const maps = {
+            default: { name: 'Main HQ', bg: '#020617', line: '#1e293b' },
+            magma: { name: 'Magma Rival', bg: '#450a0a', line: '#f97316' },
+            neon: { name: 'Neon Streets', bg: '#171717', line: '#22d3ee' }
+        };
+        for(let i=0; i<22; i++) maps[`world_${i}`] = { name: `Sector ${i+10}`, bg: `hsl(${i*15}, 30%, 5%)`, line: `hsl(${i*15}, 50%, 20%)` };
+
+        const unitStats = {
+            scout: { name: 'RIVAL SCOUT', hp: 200, speed: 7.5, dmg: 20, price: 0, color: '#22d3ee' },
+            titan: { name: 'RIVAL TITAN', hp: 8000, speed: 4, dmg: 50, price: 5000, color: '#94a3b8' }
+        };
+        for(let i=0; i<48; i++) {
+            unitStats[`rival_${i}`] = {
+                name: `RIVAL-X${i+100}`, hp: 3000 + (i*8000), speed: 5 - (i*0.05), dmg: 40 + (i*40),
+                price: 1000 + (i*10000), color: `hsl(${i*10}, 60%, 50%)`
+            };
+        }
+
+        function formatScore(n) {
+            if (n >= 1e30) return (n / 1e30).toFixed(2) + " Nonillion";
+            if (n >= 1e12) return (n / 1e12).toFixed(2) + " Trillion";
+            if (n >= 1e9) return (n / 1e9).toFixed(2) + " Billion";
+            if (n >= 1e6) return (n / 1e6).toFixed(2) + " Million";
+            return n.toLocaleString();
+        }
+
+        function giveNonillion() {
+            totalScore += 1e30;
+            updateGlobalScore();
+        }
+
+        class Entity {
+            constructor(x, y, stats, color, isEnemy = false, id = 1) {
+                this.id = id; this.x = x; this.y = y; this.stats = stats;
+                this.r = stats.hp > 10000 ? 55 : 35;
+                this.hp = stats.hp; this.maxHp = stats.hp; this.speed = stats.speed;
+                this.dmg = stats.dmg; this.color = color; this.isEnemy = isEnemy;
+                this.lastShot = 0; this.rot = 0;
+            }
+            draw() {
+                const sx = this.x - camera.x, sy = this.y - camera.y;
+                if (sx < -100 || sx > canvas.width + 100 || sy < -100 || sy > canvas.height + 100) return;
+                
+                ctx.save();
+                ctx.translate(sx, sy);
+                ctx.rotate(this.rot);
+                ctx.lineWidth = 4; ctx.strokeStyle = this.color; ctx.fillStyle = "#020617";
+                
+                if (this.stats.hp > 5000) {
+                    ctx.strokeRect(-this.r, -this.r, this.r*2, this.r*2); ctx.fillRect(-this.r, -this.r, this.r*2, this.r*2);
+                    ctx.fillStyle = this.color; ctx.fillRect(0, -8, this.r*1.5, 16);
+                } else {
+                    ctx.beginPath(); ctx.moveTo(this.r, 0); ctx.lineTo(-this.r, -this.r); ctx.lineTo(-this.r, this.r); ctx.closePath(); ctx.fill(); ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+
+        function showLobby() {
+            ['map-select', 'shop', 'p2-options', 'end-screen', 'hud', 'mobile-overlay'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('lobby').classList.remove('hidden');
+            gameActive = false;
+        }
+
+        function showMapSelect() {
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('map-select').classList.remove('hidden');
+            const grid = document.getElementById('map-grid'); grid.innerHTML = '';
+            Object.entries(maps).forEach(([id, m]) => {
+                const card = document.createElement('div');
+                card.className = `card ${currentMap === id ? 'selected' : ''}`;
+                card.innerHTML = `<div class="text-sm font-black text-center" style="color:${m.line}">${m.name}</div>`;
+                card.onclick = () => { currentMap = id; showMapSelect(); };
+                grid.appendChild(card);
+            });
+        }
+
+        function showShop() {
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('shop').classList.remove('hidden');
+            const grid = document.getElementById('unit-grid'); grid.innerHTML = '';
+            Object.entries(unitStats).forEach(([id, s]) => {
+                const owned = ownedUnits[id];
+                const card = document.createElement('div');
+                card.className = `card ${currentUnit === id ? 'selected' : ''}`;
+                card.innerHTML = `
+                    <div class="text-[10px] font-bold" style="color:${s.color}">${s.name}</div>
+                    <div class="text-[9px] text-slate-500 mb-2">${s.hp} HP</div>
+                    <div class="text-[9px] font-black py-1 rounded ${owned?'bg-cyan-500/20 text-cyan-400':'bg-amber-500 text-amber-950'} text-center uppercase">
+                        ${owned?'Select':formatScore(s.price)}
+                    </div>
+                `;
+                card.onclick = () => {
+                    if(owned) currentUnit = id;
+                    else if(totalScore >= s.price) { totalScore -= s.price; ownedUnits[id] = true; currentUnit = id; }
+                    showShop(); updateGlobalScore();
+                };
+                grid.appendChild(card);
+            });
+        }
+
+        function showP2Options() {
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('p2-options').classList.remove('hidden');
+        }
+
+        function setMode(n, sub) { playerCount = n; gameSubMode = sub; startGame(); }
+
+        function toggleiPadMode() {
+            isIPadMode = !isIPadMode;
+            document.getElementById('ipad-status').innerText = isIPadMode ? 'ON' : 'OFF';
+        }
+
+        function startGame() {
+            gameActive = true; sessionPoints = 0; gameTime = 90;
+            ['lobby', 'map-select', 'shop', 'p2-options', 'end-screen'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('hud').classList.remove('hidden');
+            if(isIPadMode) document.getElementById('mobile-overlay').classList.remove('hidden');
+
+            const s = unitStats[currentUnit];
+            p1 = new Entity(2500, 2500, s, s.color, false, 1);
+            if(playerCount === 2) {
+                p2 = new Entity(gameSubMode === 'versus' ? 3500 : 2700, 2500, s, '#d946ef', false, 2);
+                document.getElementById('p2-hud').classList.remove('hidden');
+            } else { p2 = null; document.getElementById('p2-hud').classList.add('hidden'); }
+
+            enemies = []; bullets = []; obstacles = [];
+            if(gameSubMode === 'coop' || playerCount === 1) {
+                for(let i=0; i<12; i++) enemies.push(new Entity(Math.random()*5000, Math.random()*5000, unitStats.scout, '#f43f5e', true));
+            }
+            for(let i=0; i<50; i++) obstacles.push({x: Math.random()*5000, y: Math.random()*5000, r: 80 + Math.random()*100});
+        }
+
+        function update() {
+            if(!gameActive) return;
+
+            // P1 Input
+            if(isIPadMode) {
+                p1.x += joy.vx * p1.speed; p1.y += joy.vy * p1.speed;
+                if(joy.vx !== 0 || joy.vy !== 0) p1.rot = Math.atan2(joy.vy, joy.vx);
+            } else {
+                let mx = 0, my = 0;
+                if(keys['w']) my--; if(keys['s']) my++; if(keys['a']) mx--; if(keys['d']) mx++;
+                p1.x += mx * p1.speed; p1.y += my * p1.speed;
+                p1.rot = Math.atan2(mouse.y + camera.y - p1.y, mouse.x + camera.x - p1.x);
+            }
+            if(mouse.left && Date.now() - p1.lastShot > 150) {
+                bullets.push({x: p1.x, y: p1.y, vx: Math.cos(p1.rot)*25, vy: Math.sin(p1.rot)*25, ownerId: 1, dmg: p1.dmg, color: p1.color});
+                p1.lastShot = Date.now();
+            }
+
+            // P2 Input
+            if(p2) {
+                let m2x = 0, m2y = 0;
+                if(keys['arrowup']) m2y--; if(keys['arrowdown']) m2y++;
+                if(keys['arrowleft']) m2x--; if(keys['arrowright']) m2x++;
+                p2.x += m2x * p2.speed; p2.y += m2y * p2.speed;
+                if(m2x !== 0 || m2y !== 0) p2.rot = Math.atan2(m2y, m2x);
+                if(keys['enter'] && Date.now() - p2.lastShot > 150) {
+                    bullets.push({x: p2.x, y: p2.y, vx: Math.cos(p2.rot)*25, vy: Math.sin(p2.rot)*25, ownerId: 2, dmg: p2.dmg, color: '#d946ef'});
+                    p2.lastShot = Date.now();
+                }
+            }
+
+            camera.x += (p1.x - canvas.width/2 - camera.x) * 0.1;
+            camera.y += (p1.y - canvas.height/2 - camera.y) * 0.1;
+
+            bullets.forEach((b, i) => {
+                b.x += b.vx; b.y += b.vy;
+                if(b.ownerId > 0) {
+                    enemies.forEach((e, j) => {
+                        if(Math.hypot(b.x-e.x, b.y-e.y) < e.r) { e.hp -= b.dmg; bullets.splice(i, 1); if(e.hp <= 0) { enemies.splice(j, 1); sessionPoints += 1500; } }
+                    });
+                    if(gameSubMode === 'versus') {
+                        const target = b.ownerId === 1 ? p2 : p1;
+                        if(Math.hypot(b.x-target.x, b.y-target.y) < target.r) { target.hp -= b.dmg; bullets.splice(i, 1); }
+                    }
+                } else {
+                    [p1, p2].forEach(p => { if(p && Math.hypot(b.x-p.x, b.y-p.y) < p.r) { p.hp -= b.dmg; bullets.splice(i, 1); } });
+                }
+            });
+
+            enemies.forEach(e => {
+                const target = p1;
+                e.rot = Math.atan2(target.y-e.y, target.x-e.x);
+                e.x += Math.cos(e.rot)*e.speed; e.y += Math.sin(e.rot)*e.speed;
+                if(Math.random() < 0.01) bullets.push({x: e.x, y: e.y, vx: Math.cos(e.rot)*15, vy: Math.sin(e.rot)*15, ownerId: 0, dmg: 15, color: '#f43f5e'});
+            });
+
+            if(p1.hp <= 0 || (p2 && p2.hp <= 0) || (enemies.length === 0 && gameSubMode === 'coop') || gameTime <= 0) {
+                gameActive = false; document.getElementById('end-screen').classList.remove('hidden');
+                document.getElementById('hud').classList.add('hidden');
+                totalScore += sessionPoints + 2000;
+                document.getElementById('reward-text').innerText = `+${formatScore(sessionPoints + 2000)} CREDITS`;
+                updateGlobalScore();
+            }
+
+            if(Date.now() - lastTimeUpdate > 1000) { gameTime--; lastTimeUpdate = Date.now(); document.getElementById('timer-display').innerText = `00:${gameTime.toString().padStart(2,'0')}`; }
+            updateHUD();
+        }
+
+        function updateHUD() {
+            document.getElementById('p1-hp').style.width = (Math.max(0, p1.hp)/p1.maxHp*100) + '%';
+            if(p2) document.getElementById('p2-hp').style.width = (Math.max(0, p2.hp)/p2.maxHp*100) + '%';
+            document.getElementById('session-score').innerText = `+${formatScore(sessionPoints)}`;
+        }
+
+        function updateGlobalScore() { document.getElementById('score-val').innerText = formatScore(totalScore); }
+
+        function draw() {
+            const m = maps[currentMap];
+            ctx.fillStyle = m.bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+            if(gameActive) {
+                ctx.strokeStyle = m.line; ctx.lineWidth = 1;
+                for(let i=0; i<5000; i+=250) { ctx.beginPath(); ctx.moveTo(i-camera.x, -camera.y); ctx.lineTo(i-camera.x, 5000-camera.y); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-camera.x, i-camera.y); ctx.lineTo(5000-camera.x, i-camera.y); ctx.stroke(); }
+                obstacles.forEach(o => { ctx.beginPath(); ctx.arc(o.x-camera.x, o.y-camera.y, o.r, 0, Math.PI*2); ctx.strokeStyle = m.line; ctx.stroke(); });
+                p1.draw(); if(p2) p2.draw(); enemies.forEach(e => e.draw());
+                bullets.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x-camera.x, b.y-camera.y, 6, 0, Math.PI*2); ctx.fill(); });
+                update();
+            }
+            requestAnimationFrame(draw);
+        }
+
+        // Mobile Controls
+        const jB = document.getElementById('joy-base'), jS = document.getElementById('joy-stick');
+        jB.addEventListener('touchstart', e => { joy.active = true; const r = jB.getBoundingClientRect(); joy.startX = r.left + r.width/2; joy.startY = r.top + r.height/2; });
+        window.addEventListener('touchmove', e => {
+            if(!joy.active) return;
+            const t = Array.from(e.touches).find(touch => touch.clientX < window.innerWidth/2);
+            if(!t) return;
+            const dx = t.clientX - joy.startX, dy = t.clientY - joy.startY, dist = Math.min(50, Math.hypot(dx, dy));
+            const angle = Math.atan2(dy, dx); joy.vx = Math.cos(angle) * (dist/50); joy.vy = Math.sin(angle) * (dist/50);
+            jS.style.transform = `translate(calc(-50% + ${Math.cos(angle)*dist}px), calc(-50% + ${Math.sin(angle)*dist}px))`;
+        });
+        window.addEventListener('touchend', () => { joy.active = false; joy.vx = 0; joy.vy = 0; jS.style.transform = `translate(-50%, -50%)`; });
+        document.getElementById('mobile-atk').addEventListener('touchstart', () => mouse.left = true);
+        document.getElementById('mobile-atk').addEventListener('touchend', () => mouse.left = false);
+
+        window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+        window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+        window.addEventListener('mousedown', () => mouse.left = true);
+        window.addEventListener('mouseup', () => mouse.left = false);
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        draw();
+    </script>
+</body>
+</html>
