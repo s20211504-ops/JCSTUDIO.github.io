@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>奧數神射手 - 全能課本模擬版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;900&family=Noto+Sans+TC:wght@400;900&family=Noto+Sans+JP:wght@400;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', 'Noto Sans SC', 'Noto Sans JP', sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            cursor: crosshair;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #targets-area {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            margin-top: 50px;
+            pointer-events: auto;
+            flex-wrap: wrap;
+            max-width: 800px;
+        }
+
+        .target {
+            width: 140px;
+            height: 90px;
+            border: 3px solid #000;
+            background: #fff;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 6px 6px 0px #000;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .target:hover {
+            background: #000;
+            color: #fff;
+            transform: translateY(-5px);
+            box-shadow: 6px 11px 0px #000;
+        }
+
+        .btn {
+            border: 3px solid #000;
+            background: #fff;
+            color: #000;
+            padding: 12px 20px;
+            font-weight: 900;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 5px 5px 0px #000;
+            transition: all 0.1s;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn:active {
+            box-shadow: 0px 0px 0px #000;
+            transform: translate(5px, 5px);
+        }
+
+        .btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
+        }
+
+        .crosshair {
+            position: fixed;
+            width: 30px;
+            height: 30px;
+            border: 2px solid #000;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+
+        .crosshair::before { content: ''; position: absolute; top: 50%; left: -6px; right: -6px; height: 2px; background: #000; }
+        .crosshair::after { content: ''; position: absolute; left: 50%; top: -6px; bottom: -6px; width: 2px; background: #000; }
+
+        .level-card {
+            border: 4px solid #000;
+            background: #fff;
+            padding: 30px;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+
+        .formula-display {
+            font-size: 1.1rem;
+            font-weight: 900;
+            background: #f0f0f0;
+            padding: 15px;
+            margin: 15px 0;
+            border: 2px dashed #000;
+        }
+
+        .grade-btn-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+        }
+
+        .shop-item {
+            border: 3px solid #000;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9f9f9;
+        }
+
+        .badge {
+            background: #000;
+            color: #fff;
+            padding: 2px 4px;
+            font-size: 0.65rem;
+            vertical-align: middle;
+            margin-left: 2px;
+        }
+
+        .input-code {
+            border: 3px solid #000;
+            padding: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            width: 100%;
+            outline: none;
+            margin-bottom: 10px;
+        }
+
+        .live-hint-box {
+            position: absolute;
+            bottom: 120px;
+            left: 32px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 12px 16px;
+            border-left: 4px solid #facc15;
+            max-width: 260px;
+            font-size: 0.85rem;
+            pointer-events: none;
+            z-index: 50;
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .study-active-tag {
+            background: #22c55e;
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: 99px;
+            font-size: 0.7rem;
+            margin-left: 5px;
+        }
+
+        .exam-mode-indicator {
+            background: #dc2626;
+            color: #fff;
+            padding: 4px 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+            border: 2px solid #000;
+            margin-bottom: 10px;
+        }
+
+        /* 課本樣式 */
+        .textbook-content {
+            text-align: left;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 2px solid #eee;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+        .textbook-example {
+            background: #fffbeb;
+            border-left: 4px solid #d97706;
+            padding: 10px;
+            margin: 10px 0;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <select id="lang-select" class="lang-selector fixed top-5 left-5 z-50 border-2 border-black p-1 font-bold" onchange="changeLanguage()">
+            <option value="zh-Hant">繁體中文</option>
+            <option value="zh-Hans">简体中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+        </select>
+
+        <div class="studio-credit fixed bottom-5 right-5 z-50 border-2 border-black p-1 px-2 font-bold bg-white" onclick="showCredit()">MADE BY JC STUDIO</div>
+
+        <div id="currency-display" class="fixed top-5 right-5 font-black text-xl z-50 bg-white border-2 border-black px-4 py-2 flex items-center gap-3">
+            <span id="study-pack-status" class="hidden study-active-tag">STUDY BUFF ON</span>
+            <span>RP: <span id="rp-amount">0</span></span>
+        </div>
+
+        <!-- 1. 主功能表 -->
+        <div id="menu" class="flex flex-col items-center justify-center h-screen space-y-6 px-4">
+            <h1 class="text-6xl md:text-8xl font-black italic tracking-tighter text-center text-black">MATH FPS</h1>
+            <p class="text-lg md:text-xl font-bold text-black text-center max-w-2xl" id="menu-sub-title">奧數排位賽：從小一到中六，答對即晉級，向全能數學之巔！</p>
+            
+            <div class="grade-btn-grid max-w-lg" id="grade-selection">
+                <button onclick="startLevel(1)" class="btn text-lg">G1</button>
+                <button onclick="startLevel(2)" class="btn text-lg">G2</button>
+                <button onclick="startLevel(3)" class="btn text-lg">G3</button>
+                <button onclick="startLevel(4)" class="btn text-lg">G4</button>
+                <button onclick="startLevel(5)" class="btn text-lg">G5</button>
+                <button onclick="startLevel(6)" class="btn text-lg">G6</button>
+                <button onclick="startLevel(7)" class="ms-btn btn text-lg border-blue-600 text-blue-600 hidden">G7<span class="badge">MS</span></button>
+                <button onclick="startLevel(8)" class="ms-btn btn text-lg border-blue-600 text-blue-600 hidden">G8<span class="badge">MS</span></button>
+                <button onclick="startLevel(9)" class="ms-btn btn text-lg border-blue-600 text-blue-600 hidden">G9<span class="badge">MS</span></button>
+                <button onclick="startLevel(10)" class="ms-btn btn text-lg border-red-600 text-red-600 hidden font-black">G10<span class="badge bg-red-600">HS</span></button>
+                <button onclick="startLevel(11)" class="ms-btn btn text-lg border-red-600 text-red-600 hidden font-black">G11<span class="badge bg-red-600">HS</span></button>
+                <button onclick="startLevel(12)" class="ms-btn btn text-lg border-red-600 text-red-600 hidden font-black">G12<span class="badge bg-red-600">HS</span></button>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-4">
+                <button onclick="toggleShop()" class="btn bg-yellow-300" id="shop-open-btn">🛒 商店 [SHOP]</button>
+                <button onclick="openExamSelector()" class="btn bg-red-500 text-white border-red-800" id="exam-open-btn">📝 模擬考試 [MOCK EXAM]</button>
+                <button onclick="openTextbookSelector()" class="btn bg-blue-500 text-white border-blue-800" id="book-open-btn">📚 電子課本 [TEXTBOOK]</button>
+            </div>
+        </div>
+
+        <!-- 課本選擇介面 -->
+        <div id="textbook-selector-modal" class="modal-overlay" onclick="closeTextbookSelector()">
+            <div class="level-card w-full max-w-lg" onclick="event.stopPropagation()">
+                <h2 class="text-3xl font-black italic mb-6">TEXTBOOK SELECTOR</h2>
+                <p class="mb-4 text-sm font-bold opacity-60">選擇年級課本進行溫習。閱讀後可獲得 5 RP 獎勵！</p>
+                <div class="grade-btn-grid" id="textbook-grade-grid"></div>
+                <button onclick="closeTextbookSelector()" class="btn w-full mt-6">取消 [CANCEL]</button>
+            </div>
+        </div>
+
+        <!-- 課本閱讀介面 -->
+        <div id="textbook-modal" class="modal-overlay" onclick="closeTextbook()">
+            <div class="level-card w-full max-w-2xl" onclick="event.stopPropagation()">
+                <h2 id="book-title" class="text-2xl font-black border-b-4 border-black pb-2 mb-4">YEAR 1 MATH</h2>
+                <div id="book-content-area" class="textbook-content text-black font-medium"></div>
+                <div class="flex justify-between items-center mt-4">
+                    <span class="text-xs font-bold opacity-50">JC STUDIO EDUCATION SYSTEM</span>
+                    <button onclick="finishReading()" class="btn bg-green-500 text-white border-green-800">完成閱讀並領取獎勵</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 考試選擇介面 -->
+        <div id="exam-selector-modal" class="modal-overlay" onclick="closeExamSelector()">
+            <div class="level-card w-full max-w-lg" onclick="event.stopPropagation()">
+                <h2 class="text-3xl font-black italic mb-6">MOCK EXAM SELECTOR</h2>
+                <p class="mb-4 text-sm font-bold opacity-60">考試規則：共 10 題，限時更短，準確率決定評級與 RP 獎勵。</p>
+                <div class="grade-btn-grid" id="exam-grade-grid"></div>
+                <button onclick="closeExamSelector()" class="btn w-full mt-6">取消 [CANCEL]</button>
+            </div>
+        </div>
+
+        <!-- 商店介面 -->
+        <div id="shop-modal" class="modal-overlay" onclick="toggleShop()">
+            <div class="level-card w-full max-w-md max-h-[80vh] overflow-y-auto" onclick="event.stopPropagation()">
+                <h2 class="text-3xl font-black italic mb-6">MATH SHOP</h2>
+                <div class="text-right mb-4 font-bold">Your Rank Points: <span id="shop-rp">0</span></div>
+                <div class="shop-item">
+                    <div class="text-left pr-4">
+                        <div class="font-black">中學全能大禮包 (G7-G12)</div>
+                        <div class="text-xs opacity-60">解鎖中一至中六所有進階數學內容</div>
+                    </div>
+                    <button id="buy-ms-pack" onclick="buyItem('ms-pack')" class="btn text-xs py-1 px-3 min-w-[80px]">1000 RP</button>
+                </div>
+                <div class="shop-item border-green-500 bg-green-50">
+                    <div class="text-left pr-4">
+                        <div class="font-black text-green-700">📚 溫書大禮包 [STUDY PACK]</div>
+                        <div class="text-xs opacity-80 text-green-600">效果：+15秒、RP雙倍、護盾</div>
+                    </div>
+                    <button id="buy-study-pack" onclick="buyItem('study-pack')" class="btn text-xs py-1 px-3 min-w-[80px] bg-green-200 border-green-500">2000 RP</button>
+                </div>
+                <div class="border-t-2 border-black pt-4 mt-4">
+                    <div class="text-left font-black mb-2 text-sm">兌換代碼 [REDEEM CODE]</div>
+                    <input type="text" id="promo-code" class="input-code text-sm" placeholder="ENTER CODE...">
+                    <button onclick="redeemCode()" class="btn w-full text-sm bg-black text-white">確認兌換 [REDEEM]</button>
+                </div>
+                <button onclick="toggleShop()" class="btn w-full mt-4">返回 [BACK]</button>
+            </div>
+        </div>
+
+        <!-- 2. 教學/準備介面 -->
+        <div id="tutorial" class="hidden flex flex-col items-center justify-center h-screen bg-white p-10">
+            <div class="level-card">
+                <div id="exam-tag" class="exam-mode-indicator hidden">考試模式：MOCK EXAM</div>
+                <h2 id="level-title" class="text-3xl font-black mb-4 italic text-black">Grade Training</h2>
+                <div id="level-instruction" class="text-left space-y-4 text-black"></div>
+                <div class="flex flex-col space-y-4 mt-10">
+                    <button onclick="enterGame()" class="btn text-xl w-full" id="ready-btn">我已學會 [READY]</button>
+                    <button onclick="showSection('menu')" class="btn text-sm w-full opacity-60" id="back-home-btn-1">返回主頁 [HOME]</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 遊戲進行介面 -->
+        <div id="game-container" class="hidden canvas-container">
+            <div class="crosshair" id="cursor"></div>
+            <div class="absolute top-0 left-0 w-full p-8 flex justify-between items-start pointer-events-none">
+                <div class="bg-white border-4 border-black p-6 pointer-events-auto min-w-[300px] md:min-w-[400px]">
+                    <div id="level-indicator" class="text-sm font-black mb-2 opacity-60 italic text-black uppercase">Level Progress</div>
+                    <div id="question-box" class="text-3xl md:text-5xl font-black text-black">---</div>
+                    <div id="exam-progress" class="mt-4 h-2 bg-gray-200 border border-black hidden">
+                        <div id="exam-progress-bar" class="h-full bg-red-500" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="text-right pointer-events-auto flex flex-col items-end">
+                    <div class="flex items-baseline space-x-2">
+                        <span class="text-xs font-black uppercase opacity-40" id="label-score">Score</span>
+                        <div class="text-5xl font-black text-black leading-none" id="score-display">00</div>
+                        <span class="text-xl font-black opacity-20" id="score-target-label">/ 100</span>
+                    </div>
+                    <div id="rank-display" class="mt-2 text-2xl font-black uppercase italic text-black">Rank</div>
+                    <div class="text-sm font-bold text-black mt-1 opacity-60" id="timer-display">45s</div>
+                </div>
+            </div>
+            <div id="targets-area"></div>
+            <div class="absolute bottom-8 left-8 pointer-events-auto flex space-x-4">
+                <button onclick="toggleFormula()" class="btn text-lg bg-white" id="help-btn">查看公式 [HELP]</button>
+                <button onclick="quitGame()" class="btn text-lg bg-white opacity-50" id="back-home-btn-2">退出 [EXIT]</button>
+            </div>
+        </div>
+
+        <!-- 4. 結算介面 -->
+        <div id="result-screen" class="hidden flex flex-col items-center justify-center h-screen p-4 text-center">
+            <h2 id="result-title" class="text-6xl md:text-8xl font-black mb-4 uppercase text-black">Challenge End</h2>
+            <div id="exam-grade-display" class="text-9xl font-black mb-6 text-red-600 hidden">S</div>
+            <p id="result-rank" class="text-4xl font-black mb-4 text-black"></p>
+            <p id="result-score-text" class="text-xl font-bold mb-2 text-black"></p>
+            <p id="rp-gain-text" class="text-lg font-black text-blue-600 mb-10 italic">+0 RP EARNED</p>
+            <div class="flex flex-col space-y-4 w-full max-w-xs">
+                <button id="next-btn" class="btn text-2xl w-full">繼續挑戰 [CONTINUE]</button>
+                <button onclick="showSection('menu')" class="btn text-xl w-full opacity-60" id="back-home-btn-3">返回主頁 [MENU]</button>
+            </div>
+        </div>
+
+        <div id="formula-modal" class="modal-overlay" onclick="toggleFormula()">
+            <div class="level-card shadow-2xl" onclick="event.stopPropagation()">
+                <h3 class="text-2xl font-black mb-4" id="formula-title">提示</h3>
+                <div id="modal-content" class="text-left text-lg text-black"></div>
+                <button onclick="toggleFormula()" class="btn mt-6 w-full" id="formula-close-btn">關閉 [CLOSE]</button>
+            </div>
+        </div>
+        
+        <div id="credit-modal" class="modal-overlay" onclick="closeCredit()">
+            <div class="level-card" onclick="event.stopPropagation()">
+                <h3 class="text-xl font-black mb-2 italic">STUDIO INFO</h3>
+                <p class="text-2xl font-black italic text-blue-600">Made by Javis 5L(7)</p>
+                <button onclick="closeCredit()" class="btn mt-6 text-sm" id="credit-close-btn">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 遊戲狀態與變數
+        let currentLevel = 1;
+        let score = 0;
+        let correctCount = 0;
+        let timeLeft = 45;
+        let gameActive = false;
+        let timerInterval;
+        let currentLang = 'zh-Hant';
+        let isExamMode = false;
+        let examQuestionIndex = 0;
+        let totalRP = 0;
+        let unlockedMSPack = false;
+        let unlockedStudyPack = false;
+        let usedCodes = [];
+        const EXAM_TOTAL_QUESTIONS = 10;
+        const TARGET_SCORE = 100;
+
+        // 課本數據
+        const textbookData = [
+            { title: "一年級：加減法的奧祕", content: "一年級數學的核心是理解數量的增減。加法（+）代表合起來，減法（-）代表拿走。例如 5 + 3 = 8。技巧：可以用手指或數數來輔助。", example: "例題：小明有 5 個蘋果，媽媽又給了 3 個，現在有幾個？ (5+3=8)" },
+            { title: "二年級：乘法的魅力", content: "乘法是相同加數的捷徑。3 × 4 其實就是 3 個 4 相加。理解乘法表（九九乘法）是快速計算的關鍵。", example: "例題：一隻桌子有 4 條腿，3 隻桌子有幾條腿？ (4×3=12)" },
+            { title: "三年級：運算順序與混合", content: "當式子裡有加減乘除時，我們要遵循「先乘除，後加減」的規律。括號（）具有最高優先權。", example: "例題：5 + 3 × 4 = ? (先算 3×4=12，再加 5，答案是 17)" },
+            { title: "四年級：等差數列入門", content: "等差數列是指相鄰兩項的差都相等的數列。求前 n 項的和有一個聰明的公式：(首項 + 末項) × 項數 ÷ 2。", example: "例題：1 + 2 + 3 + ... + 10 = ? (1+10)×10÷2 = 55" },
+            { title: "五年級：尋找第 N 項", content: "如果數列是以固定的差 d 增加，第 n 項的公式是：首項 + (n - 1) × 差。這能幫你預測未來數列的樣子。", example: "例題：2, 5, 8... 第 10 項是？ (2 + 9×3 = 29)" },
+            { title: "六年級：雞兔同籠", content: "這是古典奧數題。假設全是雞，算出總腿數，再跟題目比較，多出的腿就是兔子的（兔子多 2 條腿）。公式：(總腿數 - 總頭數×2) ÷ 2 = 兔數。", example: "例題：頭 10，腿 32。兔子有幾隻？ ((32-20)÷2 = 6)" },
+            { title: "中一：代數的基石", content: "負數的運算（負負得正）。x 代表一個未知數，我們要透過移項來解出它。記住：等號兩邊同時加減乘除，平衡不變。", example: "例題：x + 5 = 2，x 等於多少？ (x = 2 - 5 = -3)" },
+            { title: "中二：聯立方程組", content: "兩個方程兩個未知數（x 和 y）。我們可以使用代入法（把 x 代換掉）或消去法（讓 x 的係數相同後相減）。", example: "例題：x+y=10, x-y=2。相加得 2x=12，x=6。" },
+            { title: "中三：畢氏定理", content: "在直角三角形中，兩條直角邊（a 和 b）的平方和等於斜邊（c）的平方：a² + b² = c²。", example: "例題：一邊 3，一邊 4，斜邊是？ (3²+4²=25, 根號 25 = 5)" },
+            { title: "中四：二次方程的根", content: "形式為 ax² + bx + c = 0。我們可以使用判別式 Δ = b² - 4ac 來判斷根的情況。若 Δ > 0，則有兩個不相等的實數根。", example: "例題：x² - 9 = 0。x = ±3。" },
+            { title: "中五：對數 Logarithm", content: "Log 是指數的逆運算。如果 a的c次方 = b，那麼 logₐ(b) = c。記住性質：log(MN) = log M + log N。", example: "例題：log₃(27) = ? (3的幾次方是 27？ 答案是 3)" },
+            { title: "中六：微積分初步", content: "導數代表函數在某一點的斜率（變化率）。基本規則：xⁿ 的導數是 nxⁿ⁻¹。", example: "例題：求 x³ 在 x=2 處的導數。 (3x² = 3×2² = 12)" }
+        ];
+
+        const translations = {
+            'zh-Hant': {
+                menuSub: "奧數排位賽：從小一到中六，答對即晉級，向全能數學之王進發！",
+                ready: "我已學會 [READY]", help: "查看公式 [HELP]", exit: "退出 [EXIT]",
+                score: "得分", levelProgress: "年級進度", formulaTitle: "年級提示",
+                close: "關閉 [CLOSE]", resultEnd: "挑戰結束", resultWin: "年級達成！",
+                resultFinalRank: "最終榮譽：", resultFinalScore: "最終得分：",
+                continue: "下一步 [NEXT]", retry: "重試本關 [RETRY]", backMenu: "返回主頁 [MENU]",
+                home: "返回主頁 [HOME]", shop: "🛒 商店 [SHOP]", mockExam: "📝 模擬考試 [MOCK EXAM]",
+                textbook: "📚 電子課本 [TEXTBOOK]", rpEarned: "獲得榮譽點數",
+                ranks: ["青銅 1", "青銅 2", "青銅 3", "白銀 1", "白銀 2", "白銀 3", "黃金 1", "黃金 2", "黃金 3", "鉑金 1", "鉑金 2", "鉑金 3", "鑽石 1", "鑽石 2", "鑽石 3", "大師 1", "大師 2", "大師 3", "金色愛因斯坦"],
+                lvlNames: ["小一：基礎加減", "小二：乘法初步", "小三：四則混合", "小四：等差數列", "小五：進階數列", "小六：雞兔同籠", "中一：負數與代數", "中二：聯立方程", "中三：勾股定理", "中四：二次方程", "中五：對數 Log", "中六：微積分初步"],
+                formulaTxt: ["加法：合起來；減法：拿走或比較差額。", "乘法：相同加數的簡便運算。例：3x4 是 3個4。", "先乘除，後加減；有括號先算括號內。", "等差數列和：(1+末項)x末項/2", "等差數列第n項：a₁ + (n-1) × d", "假設法：(總腿數 - 總頭數 × 2) ÷ 2 = 兔子數", "負負得正；移項變號。", "代入法或消去法。求 x 和 y 的交集點。", "a² + b² = c²。兩條直角邊的平方和等於斜邊平方。", "判別式 Δ = b² - 4ac。", "logₐ(b) = c 意即 aᶜ = b。", "導數：f(x) = xⁿ 則 f'(x) = nxⁿ⁻¹。"]
+            }
+        };
+
+        function changeLanguage() {
+            currentLang = document.getElementById('lang-select').value;
+            const t = translations[currentLang] || translations['zh-Hant'];
+            document.getElementById('menu-sub-title').innerText = t.menuSub;
+            document.getElementById('ready-btn').innerText = t.ready;
+            document.getElementById('help-btn').innerText = t.help;
+            document.getElementById('back-home-btn-2').innerText = t.exit;
+            document.getElementById('label-score').innerText = t.score;
+            document.getElementById('level-indicator').innerText = t.levelProgress;
+            document.getElementById('formula-title').innerText = t.formulaTitle;
+            document.getElementById('formula-close-btn').innerText = t.close;
+            document.getElementById('credit-close-btn').innerText = t.close;
+            document.getElementById('back-home-btn-1').innerText = t.home;
+            document.getElementById('back-home-btn-3').innerText = t.backMenu;
+            document.getElementById('shop-open-btn').innerText = t.shop;
+            document.getElementById('exam-open-btn').innerText = t.mockExam;
+            document.getElementById('book-open-btn').innerText = t.textbook;
+            updateRankUI();
+        }
+
+        // 課本邏輯
+        let lastReadLevel = 0;
+        function openTextbookSelector() {
+            const grid = document.getElementById('textbook-grade-grid');
+            grid.innerHTML = '';
+            const maxGrade = unlockedMSPack ? 12 : 6;
+            for(let i=1; i<=maxGrade; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'btn text-lg border-blue-500 text-blue-600';
+                btn.innerText = `G${i} Book`;
+                btn.onclick = () => openTextbook(i);
+                grid.appendChild(btn);
+            }
+            document.getElementById('textbook-selector-modal').style.display = 'flex';
+        }
+
+        function closeTextbookSelector() { document.getElementById('textbook-selector-modal').style.display = 'none'; }
+
+        function openTextbook(lvl) {
+            lastReadLevel = lvl;
+            const data = textbookData[lvl - 1];
+            document.getElementById('book-title').innerText = data.title;
+            document.getElementById('book-content-area').innerHTML = `
+                <p class="mb-4">${data.content}</p>
+                <div class="textbook-example">${data.example}</div>
+                <p class="mt-4 text-sm text-gray-600 italic">完成閱讀後，別忘了去挑戰相應年級的訓練或考試喔！</p>
+            `;
+            closeTextbookSelector();
+            document.getElementById('textbook-modal').style.display = 'flex';
+        }
+
+        function closeTextbook() { document.getElementById('textbook-modal').style.display = 'none'; }
+
+        function finishReading() {
+            totalRP += 5;
+            updateRPDisplay();
+            alert("你完成了一次深度溫習！獲得 5 RP 智慧獎勵。");
+            closeTextbook();
+        }
+
+        // 考試邏輯
+        function openExamSelector() {
+            const grid = document.getElementById('exam-grade-grid');
+            grid.innerHTML = '';
+            const maxGrade = unlockedMSPack ? 12 : 6;
+            for(let i=1; i<=maxGrade; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'btn text-lg border-red-500 text-red-600';
+                btn.innerText = `G${i} Exam`;
+                btn.onclick = () => startExam(i);
+                grid.appendChild(btn);
+            }
+            document.getElementById('exam-selector-modal').style.display = 'flex';
+        }
+        function closeExamSelector() { document.getElementById('exam-selector-modal').style.display = 'none'; }
+
+        function startExam(lvl) {
+            isExamMode = true; currentLevel = lvl; examQuestionIndex = 0;
+            closeExamSelector();
+            document.getElementById('exam-tag').classList.remove('hidden');
+            updateTutorialDisplay();
+            showSection('tutorial');
+        }
+
+        // 遊戲核心邏輯
+        function updateTutorialDisplay() {
+            const t = translations[currentLang] || translations['zh-Hant'];
+            document.getElementById('level-title').innerText = (isExamMode ? "[EXAM] " : "") + t.lvlNames[currentLevel - 1];
+            document.getElementById('level-instruction').innerHTML = `<div class="formula-display">${t.formulaTxt[currentLevel - 1]}</div>`;
+        }
+
+        function showSection(id) {
+            ['menu', 'tutorial', 'game-container', 'result-screen'].forEach(s => document.getElementById(s).classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function startLevel(lvl) {
+            isExamMode = false; currentLevel = lvl;
+            document.getElementById('exam-tag').classList.add('hidden');
+            updateTutorialDisplay();
+            showSection('tutorial');
+        }
+
+        function enterGame() {
+            showSection('game-container');
+            score = 0; correctCount = 0;
+            let baseTime = isExamMode ? 30 : 45;
+            timeLeft = unlockedStudyPack ? (baseTime + 15) : baseTime;
+            gameActive = true;
+            document.getElementById('score-display').innerText = "00";
+            if(isExamMode) {
+                document.getElementById('exam-progress').classList.remove('hidden');
+                document.getElementById('score-target-label').innerText = `/ ${EXAM_TOTAL_QUESTIONS}`;
+                document.getElementById('exam-progress-bar').style.width = "0%";
+            } else {
+                document.getElementById('exam-progress').classList.add('hidden');
+                document.getElementById('score-target-label').innerText = "/ 100";
+            }
+            updateRankUI();
+            generateQuestion();
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (document.getElementById('formula-modal').style.display !== 'flex' && gameActive) {
+                    timeLeft--;
+                    document.getElementById('timer-display').innerText = `${timeLeft}s`;
+                    if (timeLeft <= 0) isExamMode ? finishExam() : finishLevel(false);
+                }
+            }, 1000);
+        }
+
+        function generateQuestion() {
+            let qStr = ""; let ans = 0;
+            switch(currentLevel) {
+                case 1: let a1 = Math.floor(Math.random()*15)+1; let b1 = Math.floor(Math.random()*5)+1; qStr = `${a1} + ${b1} = ?`; ans = a1 + b1; break;
+                case 2: let a2 = Math.floor(Math.random()*8)+2; let b2 = Math.floor(Math.random()*8)+2; qStr = `${a2} × ${b2} = ?`; ans = a2 * b2; break;
+                case 3: let a3 = Math.floor(Math.random()*10)+5; let b3 = Math.floor(Math.random()*5)+2; let c3 = Math.floor(Math.random()*10)+1; qStr = `${a3} × ${b3} + ${c3} = ?`; ans = a3 * b3 + c3; break;
+                case 4: let n4 = 10 + Math.floor(Math.random() * 10); qStr = `1+2+...+${n4}=?`; ans = (1 + n4) * n4 / 2; break;
+                case 5: let s5 = Math.floor(Math.random()*10)+1; let d5 = Math.floor(Math.random()*8)+2; let n5 = Math.floor(Math.random()*5)+5; qStr = `${s5}, ${s5+d5}... 第${n5}項?`; ans = s5 + (n5-1)*d5; break;
+                case 6: let heads = 10; let rabbits = 6; qStr = `H:10, L:32 → Rab?`; ans = rabbits; break;
+                case 7: let x7 = Math.floor(Math.random()*20)-10; qStr = `${x7}+(-5)=?`; ans = x7 - 5; break;
+                case 8: qStr = `x+y=10, x-y=2, x=?`; ans = 6; break;
+                case 9: qStr = `3² + 4² = c², c=?`; ans = 5; break;
+                case 10: qStr = `x² - 16 = 0, x>0, x=?`; ans = 4; break;
+                case 11: qStr = `log₂(8) = ?`; ans = 3; break;
+                case 12: qStr = `d/dx (x²) at x=5?`; ans = 10; break;
+            }
+            document.getElementById('question-box').innerText = qStr;
+            spawnTargets(ans);
+        }
+
+        function spawnTargets(correct) {
+            const area = document.getElementById('targets-area');
+            area.innerHTML = '';
+            const options = [correct];
+            while(options.length < 4) {
+                let w = correct + (Math.floor(Math.random() * 10) + 1) * (Math.random() > 0.5 ? 1 : -1);
+                if (!options.includes(w)) options.push(w);
+            }
+            options.sort(() => Math.random() - 0.5).forEach(val => {
+                const el = document.createElement('div');
+                el.className = 'target'; el.innerText = val;
+                el.onclick = () => {
+                    if (val === correct) {
+                        if(isExamMode) {
+                            examQuestionIndex++; score++;
+                            document.getElementById('score-display').innerText = score;
+                            document.getElementById('exam-progress-bar').style.width = (examQuestionIndex/EXAM_TOTAL_QUESTIONS*100) + "%";
+                            if(examQuestionIndex >= EXAM_TOTAL_QUESTIONS) finishExam(); else generateQuestion();
+                        } else {
+                            score += 10; correctCount++;
+                            document.getElementById('score-display').innerText = score;
+                            updateRankUI(); if (score >= TARGET_SCORE) finishLevel(true); else generateQuestion();
+                        }
+                    } else {
+                        if (!unlockedStudyPack) {
+                            if(isExamMode) timeLeft = Math.max(0, timeLeft - 5);
+                            else score = Math.max(0, score - 5);
+                            document.getElementById('score-display').innerText = score;
+                        }
+                        el.style.backgroundColor = "#000"; el.style.color = "#fff";
+                        setTimeout(() => { el.style.backgroundColor = "#fff"; el.style.color = "#000"; }, 150);
+                    }
+                };
+                area.appendChild(el);
+            });
+        }
+
+        function finishLevel(win) {
+            gameActive = false; clearInterval(timerInterval);
+            const t = translations[currentLang];
+            let gainRP = win ? (correctCount * 5 * currentLevel) : (correctCount * 2);
+            if (unlockedStudyPack) gainRP *= 2;
+            totalRP += gainRP; updateRPDisplay();
+            document.getElementById('exam-grade-display').classList.add('hidden');
+            document.getElementById('result-rank').innerText = t.resultFinalRank + t.ranks[Math.min(correctCount, t.ranks.length-1)];
+            document.getElementById('result-score-text').innerText = t.resultFinalScore + score;
+            document.getElementById('rp-gain-text').innerText = `+${gainRP} RP ${t.rpEarned}`;
+            const nextBtn = document.getElementById('next-btn');
+            if (win) {
+                document.getElementById('result-title').innerText = t.resultWin;
+                if (currentLevel < 12) { nextBtn.innerText = t.continue; nextBtn.onclick = () => startLevel(currentLevel+1); }
+                else { nextBtn.innerText = t.backMenu; nextBtn.onclick = () => showSection('menu'); }
+            } else {
+                document.getElementById('result-title').innerText = t.resultEnd;
+                nextBtn.innerText = t.retry; nextBtn.onclick = () => startLevel(currentLevel);
+            }
+            showSection('result-screen');
+        }
+
+        function finishExam() {
+            gameActive = false; clearInterval(timerInterval);
+            let grade = score >= 10 ? 'S' : (score >= 8 ? 'A' : (score >= 6 ? 'B' : 'C'));
+            let examGainRP = score * 20 * currentLevel;
+            if (unlockedStudyPack) examGainRP *= 2;
+            totalRP += examGainRP; updateRPDisplay();
+            document.getElementById('result-title').innerText = "模擬考試結束";
+            const gradeEl = document.getElementById('exam-grade-display');
+            gradeEl.innerText = grade; gradeEl.classList.remove('hidden');
+            document.getElementById('result-rank').innerText = `GRADE: ${grade}`;
+            document.getElementById('result-score-text').innerText = `Correct: ${score} / ${EXAM_TOTAL_QUESTIONS}`;
+            document.getElementById('rp-gain-text').innerText = `+${examGainRP} RP 獲得榮譽點數`;
+            const nextBtn = document.getElementById('next-btn');
+            nextBtn.innerText = "再次挑戰 [RETRY]";
+            nextBtn.onclick = () => startExam(currentLevel);
+            showSection('result-screen');
+        }
+
+        function quitGame() { gameActive = false; clearInterval(timerInterval); showSection('menu'); }
+        function toggleShop() { 
+            const m = document.getElementById('shop-modal'); m.style.display = m.style.display === 'flex' ? 'none' : 'flex'; 
+            document.getElementById('shop-rp').innerText = totalRP; updateShopButtons();
+        }
+        function updateRPDisplay() { document.getElementById('rp-amount').innerText = totalRP; }
+        function updateRankUI() {
+            const t = translations[currentLang];
+            const ri = Math.min(correctCount, t.ranks.length - 1);
+            document.getElementById('rank-display').innerText = t.ranks[ri];
+        }
+        function toggleFormula() {
+            const t = translations[currentLang];
+            const m = document.getElementById('formula-modal');
+            document.getElementById('modal-content').innerHTML = `<div class="formula-display">${t.formulaTxt[currentLevel-1]}</div>`;
+            m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+        }
+        function updateShopButtons() {
+            const b1 = document.getElementById('buy-ms-pack');
+            const b2 = document.getElementById('buy-study-pack');
+            if(unlockedMSPack) { b1.innerText = "已擁有"; b1.disabled = true; } else b1.disabled = totalRP < 1000;
+            if(unlockedStudyPack) { b2.innerText = "已啟用"; b2.disabled = true; } else b2.disabled = totalRP < 2000;
+        }
+        function buyItem(item) {
+            if(item === 'ms-pack' && totalRP >= 1000) { totalRP -= 1000; unlockedMSPack = true; document.querySelectorAll('.ms-btn').forEach(b => b.classList.remove('hidden')); }
+            else if(item === 'study-pack' && totalRP >= 2000) { totalRP -= 2000; unlockedStudyPack = true; document.getElementById('study-pack-status').classList.remove('hidden'); }
+            updateRPDisplay(); updateShopButtons();
+        }
+        function redeemCode() {
+            const c = document.getElementById('promo-code').value.toUpperCase();
+            if(c === "HWPSKOWLOON" && !usedCodes.includes(c)) { totalRP += 1000; usedCodes.push(c); updateRPDisplay(); alert("兌換成功！"); }
+        }
+        function showCredit() { document.getElementById('credit-modal').style.display = 'flex'; }
+        function closeCredit() { document.getElementById('credit-modal').style.display = 'none'; }
+        document.addEventListener('mousemove', (e) => {
+            const c = document.getElementById('cursor');
+            if (c) { c.style.left = e.clientX + 'px'; c.style.top = e.clientY + 'px'; }
+        });
+        changeLanguage();
+        updateRPDisplay();
+    </script>
+</body>
+</html>
