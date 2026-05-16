@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MATH FPS 2 - 實力挑戰賽：幾何與方程版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --accent-color: #facc15; 
+        }
+        body { 
+            margin: 0; 
+            min-height: 100vh;
+            background-color: var(--bg-color); 
+            font-family: 'Segoe UI', "Microsoft JhengHei", sans-serif; 
+            color: var(--text-color); 
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .title-italic {
+            font-size: 4.5rem;
+            font-weight: 900;
+            font-style: italic;
+            margin-top: 20px;
+            letter-spacing: -3px;
+            transform: skewX(-10deg);
+            text-shadow: 4px 4px 0px rgba(255,255,255,0.1);
+        }
+
+        .rank-badge {
+            background: linear-gradient(45deg, #facc15, #fb923c);
+            color: black;
+            padding: 2px 12px;
+            border-radius: 4px;
+            font-weight: 900;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.4);
+            white-space: nowrap;
+        }
+
+        .settings-panel {
+            background: rgba(128, 128, 128, 0.1);
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.3);
+            margin: 15px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 90%;
+            max-width: 600px;
+        }
+        
+        .setting-row { display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        .color-label { font-weight: bold; min-width: 90px; text-align: right; font-size: 0.9rem; }
+        
+        .color-option { 
+            width: 25px; height: 25px; border-radius: 50%; 
+            border: 2px solid var(--text-color); cursor: pointer; 
+        }
+
+        .mode-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            width: 95%;
+            max-width: 900px;
+            margin-top: 10px;
+        }
+
+        .mode-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid var(--text-color);
+            padding: 20px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .mode-card:hover {
+            background: var(--text-color);
+            color: var(--bg-color);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+
+        #test-container, #equation-lobby, #geometry-lobby, #speed-lobby {
+            width: 95%;
+            max-width: 1100px;
+            display: none;
+            margin-top: 20px;
+        }
+
+        .game-layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 20px;
+        }
+
+        .main-game {
+            border: 3px solid var(--text-color);
+            border-radius: 20px;
+            padding: 25px;
+            background: rgba(255,255,255,0.02);
+            position: relative;
+            min-height: 500px;
+        }
+
+        .sidebar { display: flex; flex-direction: column; gap: 15px; }
+
+        .ui-panel {
+            border: 2px solid var(--text-color);
+            border-radius: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+        }
+
+        #timer-bar-container {
+            width: 100%; height: 12px; background: rgba(255,255,255,0.2);
+            border-radius: 6px; margin-bottom: 20px; overflow: hidden;
+        }
+        #timer-bar { width: 100%; height: 100%; background: var(--accent-color); transition: width 0.1s linear; }
+
+        #question-area { font-size: 1.8rem; font-weight: 900; margin-bottom: 30px; min-height: 120px; display: flex; align-items: center; justify-content: center; text-align: center; }
+
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .option-btn {
+            background: transparent; border: 2px solid var(--text-color);
+            padding: 18px; font-size: 1.5rem; font-weight: 700; color: var(--text-color);
+            border-radius: 12px; cursor: pointer; transition: 0.2s;
+        }
+        .option-btn:hover { background: var(--text-color); color: var(--bg-color); }
+
+        .battle-log {
+            font-size: 0.8rem;
+            max-height: 150px;
+            overflow-y: auto;
+            text-align: left;
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .checkpoint-flash {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(250, 204, 21, 0.2);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 4rem;
+            font-weight: 900;
+            z-index: 10;
+            pointer-events: none;
+            color: var(--accent-color);
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        @keyframes flash-red { 0% { background-color: #7f1d1d; } 100% { background-color: var(--bg-color); } }
+        @keyframes flash-green { 0% { background-color: #064e3b; } 100% { background-color: var(--bg-color); } }
+        .flash-red { animation: flash-red 0.4s ease-out; }
+        .flash-green { animation: flash-green 0.4s ease-out; }
+
+        #win-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 2000;
+        }
+        .modal-content {
+            background: var(--bg-color); border: 2px solid var(--text-color);
+            padding: 40px; border-radius: 20px; text-align: center;
+            max-width: 450px; width: 90%;
+        }
+
+        /* 方程按鈕特效 */
+        .equation-btn-main {
+            background: linear-gradient(to right, #6366f1, #a855f7);
+            border: none !important;
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        }
+        .equation-btn-main:hover {
+            filter: brightness(1.2);
+            transform: scale(1.05) !important;
+        }
+
+        /* 幾何按鈕特效 */
+        .geometry-btn-main {
+            background: linear-gradient(to right, #10b981, #3b82f6);
+            border: none !important;
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+        .geometry-btn-main:hover {
+            filter: brightness(1.2);
+            transform: scale(1.05) !important;
+        }
+
+        /* 速度按鈕特效 */
+        .speed-btn-main {
+            background: linear-gradient(to right, #ec4899, #8b5cf6);
+            border: none !important;
+            box-shadow: 0 5px 15px rgba(236, 72, 153, 0.4);
+        }
+        .speed-btn-main:hover {
+            filter: brightness(1.2);
+            transform: scale(1.05) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="intro-screen" class="w-full flex flex-col items-center">
+        <h1 class="title-italic">MATH FPS 2</h1>
+        <div class="flex flex-wrap justify-center gap-2 mb-2">
+            <div id="current-rank" class="rank-badge">載入段位中...</div>
+            <div id="equation-rank" class="rank-badge" style="background: linear-gradient(45deg, #6366f1, #a855f7);">方程: 未入學</div>
+            <div id="geometry-rank" class="rank-badge" style="background: linear-gradient(45deg, #10b981, #3b82f6);">幾何: 未入門</div>
+            <div id="speed-rank" class="rank-badge" style="background: linear-gradient(45deg, #ec4899, #8b5cf6);">速度: 未入門</div>
+        </div>
+        <p id="high-score-display" class="text-xs opacity-70 mb-4">個人最高分: 0</p>
+        
+        <div class="settings-panel">
+            <div class="setting-row">
+                <span class="color-label">選擇年級:</span>
+                <select id="grade-level" style="background:transparent; color:inherit; border:1px solid var(--text-color); padding:5px; border-radius:5px; width: 200px;">
+                    <option value="1">一年級 (基礎加減)</option>
+                    <option value="2">二年級 (進階加減、乘法)</option>
+                    <option value="3">三年級 (除法、倍數關係)</option>
+                    <option value="4">四年級 (等差數列、大數)</option>
+                    <option value="5" selected>五年級 (雞兔同籠、分數)</option>
+                    <option value="6">六年級 (比例、代數預備)</option>
+                </select>
+            </div>
+            
+            <div class="setting-row">
+                <span class="color-label">配色主題:</span>
+                <div class="color-option" style="background:#000000" onclick="updateColors('#000000', '#ffffff')"></div>
+                <div class="color-option" style="background:#ffffff" onclick="updateColors('#ffffff', '#000000')"></div>
+                <div class="color-option" style="background:#1e3a8a" onclick="updateColors('#1e3a8a', '#ffffff')"></div>
+                <div class="color-option" style="background:#064e3b" onclick="updateColors('#064e3b', '#ffffff')"></div>
+            </div>
+        </div>
+
+        <div class="mt-4 font-bold text-yellow-400">選擇挑戰模式</div>
+        <div class="mode-container">
+            <div class="mode-card" onclick="startTest('PRACTICE')">
+                <div class="text-xl font-black mb-1">練習模式</div>
+                <div class="text-[10px] opacity-70">1000分通關</div>
+            </div>
+            <div class="mode-card equation-btn-main" onclick="openLobby('equation')">
+                <div class="text-xl font-black mb-1">心算方程</div>
+                <div class="text-[10px] opacity-90">方程訓練所</div>
+            </div>
+            <div class="mode-card geometry-btn-main" onclick="openLobby('geometry')">
+                <div class="text-xl font-black mb-1">體積面積</div>
+                <div class="text-[10px] opacity-90">幾何訓練所</div>
+            </div>
+            <div class="mode-card speed-btn-main" onclick="openLobby('speed')">
+                <div class="text-xl font-black mb-1">心算速度</div>
+                <div class="text-[10px] opacity-90">速度訓練所</div>
+            </div>
+            <div class="mode-card border-yellow-400" onclick="startTest('TEAM')">
+                <div class="text-xl font-black mb-1 text-yellow-400">死亡團隊</div>
+                <div class="text-[10px] opacity-70">4 vs 4 團戰</div>
+            </div>
+            <div class="mode-card border-red-500" onclick="startTest('FFA')">
+                <div class="text-xl font-black mb-1 text-red-500">全民自由</div>
+                <div class="text-[10px] opacity-70">大逃殺淘汰賽</div>
+            </div>
+        </div>
+
+        <div class="mt-10 opacity-50 text-[10px]">MADE BY JC STUDIO IN 2026 | 全港實力排位賽進行中</div>
+    </div>
+
+    <!-- 方程訓練所大廳 -->
+    <div id="equation-lobby">
+        <div class="main-game text-center">
+            <h2 class="text-4xl font-black italic mb-6 text-indigo-400">方程訓練所</h2>
+            <p class="mb-8 opacity-80">完成 10 道方程題目即可晉級階級</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div class="p-6 border-2 border-white/20 rounded-2xl hover:border-indigo-400 cursor-pointer transition" onclick="startTest('EQUATION', 'EASY')">
+                    <h3 class="text-xl font-bold mb-2">初級方程</h3>
+                    <p class="text-xs opacity-60">x + a = b<br>簡單一元一次</p>
+                </div>
+                <div class="p-6 border-2 border-white/20 rounded-2xl hover:border-indigo-400 cursor-pointer transition" onclick="startTest('EQUATION', 'MEDIUM')">
+                    <h3 class="text-xl font-bold mb-2 text-indigo-300">中級方程</h3>
+                    <p class="text-xs opacity-60">ax + b = c<br>兩步運算邏輯</p>
+                </div>
+                <div class="p-6 border-2 border-white/20 rounded-2xl hover:border-indigo-400 cursor-pointer transition" onclick="startTest('EQUATION', 'HARD')">
+                    <h3 class="text-xl font-bold mb-2 text-red-400">高級方程</h3>
+                    <p class="text-xs opacity-60">ax - b = cx + d<br>進階心算挑戰</p>
+                </div>
+            </div>
+            <button class="mt-12 px-10 py-3 border border-white rounded-full font-bold hover:bg-white hover:text-black transition" onclick="goHome()">返回主選單</button>
+        </div>
+    </div>
+
+    <!-- 幾何訓練所大廳 -->
+    <div id="geometry-lobby">
+        <div class="main-game text-center">
+            <h2 class="text-4xl font-black italic mb-6 text-emerald-400">幾何訓練所</h2>
+            <p class="mb-8 opacity-80">完成 10 道體積面積題目即可晉級階級</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div class="p-6 border-2 border-white/20 rounded-2xl hover:border-emerald-400 cursor-pointer transition" onclick="startTest('GEOMETRY', 'EASY')">
+                    <h3 class="text-xl font-bold mb-2">初級幾何</h3>
+                    <p class="text-xs opacity-60">正方形/長方形<br>基礎周長與面積</p>
+                </div>
+                <div class="p-6 border-2 border-white/20 rounded-2xl hover:border-emerald-400 cursor-pointer transition" onclick="startTest('GEOMETRY', 'MEDIUM')">
+                    <h3 class="text-xl font-bold mb-2 text-emerald-300">中級幾何</h3>
+                    <p class="text-xs opacity-60">三角形/梯形<br>平面圖形進階</p>
+                </div>
+                <div class="p-6 border-2 border-white/20 rounded-2xl hover:border-emerald-400 cursor-pointer transition" onclick="startTest('GEOMETRY', 'HARD')">
+                    <h3 class="text-xl font-bold mb-2 text-red-400">高級幾何</h3>
+                    <p class="text-xs opacity-60">立體體積/表面積<br>長方體與正方體</p>
+                </div>
+            </div>
+            <button class="mt-12 px-10 py-3 border border-white rounded-full font-bold hover:bg-white hover:text-black transition" onclick="goHome()">返回主選單</button>
+        </div>
+    </div>
+
+    <!-- 速度訓練所大廳 (新增) -->
+    <div id="speed-lobby">
+        <div class="main-game text-center">
+            <h2 class="text-4xl font-black italic mb-6 text-pink-400">速度訓練所</h2>
+            <p class="mb-8 opacity-80">極速挑戰：在極短時間內完成 10 題以晉級</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div class="p-6 border-2 border-white/20 rounded-2xl hover:border-pink-400 cursor-pointer transition" onclick="startTest('SPEED', 'EASY')">
+                    <h3 class="text-xl font-bold mb-2">初級速度</h3>
+                    <p class="text-xs opacity-60">5秒 / 題<br>基礎加減法</p>
+                </div>
+                <div class="p-6 border-2 border-white/20 rounded-2xl hover:border-pink-400 cursor-pointer transition" onclick="startTest('SPEED', 'MEDIUM')">
+                    <h3 class="text-xl font-bold mb-2 text-pink-300">中級速度</h3>
+                    <p class="text-xs opacity-60">3秒 / 題<br>進階加減乘除</p>
+                </div>
+                <div class="p-6 border-2 border-white/20 rounded-2xl hover:border-pink-400 cursor-pointer transition" onclick="startTest('SPEED', 'HARD')">
+                    <h3 class="text-xl font-bold mb-2 text-red-400">極限速度</h3>
+                    <p class="text-xs opacity-60">1.5秒 / 題<br>大腦超頻挑戰</p>
+                </div>
+            </div>
+            <button class="mt-12 px-10 py-3 border border-white rounded-full font-bold hover:bg-white hover:text-black transition" onclick="goHome()">返回主選單</button>
+        </div>
+    </div>
+
+    <div id="test-container">
+        <div class="game-layout">
+            <div class="main-game" id="game-viewport">
+                <div id="checkpoint-overlay" class="checkpoint-flash">ELIMINATED!</div>
+                <div class="flex justify-between items-center mb-4">
+                    <span id="mode-display" class="rank-badge">模式載入中</span>
+                    <button class="text-xs border px-3 py-1 rounded hover:bg-white hover:text-black transition" onclick="showBackHomeConfirm()">退出遊戲</button>
+                </div>
+                <div id="timer-bar-container"><div id="timer-bar"></div></div>
+                <div id="question-area">準備中...</div>
+                <div class="options-grid" id="options-area"></div>
+                
+                <div class="battle-log" id="log-container">
+                    <div>[系統] 戰鬥開始！請在檢查點前完成運算...</div>
+                </div>
+
+                <div id="status-bar" class="flex justify-between mt-8 pt-4 border-t border-current font-bold">
+                    <span id="score-label">積分: 0</span>
+                    <span id="health-label">題目: 0 / 10</span>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="ui-panel">
+                    <h3 class="text-center font-bold mb-3 text-yellow-400 border-b border-yellow-400 pb-2 italic">RANKING 排名</h3>
+                    <div id="ranking-list" class="space-y-2"></div>
+                </div>
+                <div class="ui-panel" id="survival-panel">
+                    <h4 class="text-xs font-bold mb-2 opacity-70">場上存活人數</h4>
+                    <div id="survival-list" class="space-y-1 text-[11px]"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="win-modal">
+        <div class="modal-content">
+            <h2 id="result-title" class="text-3xl font-black mb-2 text-yellow-400">VICTORY</h2>
+            <p id="result-msg" class="text-xl mb-4">你生存到了最後！</p>
+            <div id="result-stats" class="text-sm mb-6 opacity-80 bg-white/5 p-4 rounded text-left"></div>
+            <button class="px-8 py-3 bg-white text-black rounded-full font-bold text-lg hover:scale-105 transition" onclick="goHome()">回到大廳</button>
+        </div>
+    </div>
+
+<script>
+    let score = 0, health = 100, currentMode = 'PRACTICE', difficulty = 'EASY';
+    let highScore = localStorage.getItem('math_fps_highscore_v3') || 0;
+    let rankPoints = parseInt(localStorage.getItem('math_fps_rank')) || 0;
+    let equationLevel = parseInt(localStorage.getItem('math_fps_eq_level')) || 0; 
+    let geometryLevel = parseInt(localStorage.getItem('math_fps_geo_level')) || 0; 
+    let speedLevel = parseInt(localStorage.getItem('math_fps_speed_level')) || 0; // 速度晉級次數
+    let timerInterval = null, timerWidth = 100;
+    let survivors = [];
+    let currentGrade = 5;
+    let currentBg = "#000000", currentText = "#ffffff";
+    let questionCount = 0;
+
+    const RANKS = ["青銅", "白銀", "黃金", "鉑金", "鑽石", "大師", "王者"];
+    const EQ_TITLES = ["未入學", "方程學生", "方程學士", "方程碩士", "方程博士", "方程教授", "方程大師"];
+    const GEO_TITLES = ["未入門", "幾何學生", "幾何專家", "幾何碩士", "幾何博士", "幾何導師", "幾何大師"];
+    const SPEED_TITLES = ["未入門", "速度學生", "閃電俠", "超音速", "光速大師", "時間領主", "宇宙速神"];
+
+    function updateRankUI() {
+        const rankIdx = Math.min(Math.floor(rankPoints / 500), RANKS.length - 1);
+        const subRank = 3 - (Math.floor((rankPoints % 500) / 167));
+        const rankStr = `${RANKS[rankIdx]} ${"I".repeat(subRank || 1)}`;
+        document.getElementById('current-rank').innerText = rankStr;
+        document.getElementById('high-score-display').innerText = `最高分: ${highScore}`;
+        
+        document.getElementById('equation-rank').innerText = `方程: ${EQ_TITLES[Math.min(equationLevel, EQ_TITLES.length - 1)]}`;
+        document.getElementById('geometry-rank').innerText = `幾何: ${GEO_TITLES[Math.min(geometryLevel, GEO_TITLES.length - 1)]}`;
+        document.getElementById('speed-rank').innerText = `速度: ${SPEED_TITLES[Math.min(speedLevel, SPEED_TITLES.length - 1)]}`;
+    }
+
+    function updateColors(bg, text) {
+        currentBg = bg; currentText = text;
+        document.documentElement.style.setProperty('--bg-color', bg);
+        document.documentElement.style.setProperty('--text-color', text);
+    }
+
+    function openLobby(type) {
+        document.getElementById('intro-screen').style.display = 'none';
+        if(type === 'equation') document.getElementById('equation-lobby').style.display = 'block';
+        if(type === 'geometry') document.getElementById('geometry-lobby').style.display = 'block';
+        if(type === 'speed') document.getElementById('speed-lobby').style.display = 'block';
+    }
+
+    function startTest(mode, diff = 'EASY') {
+        currentMode = mode;
+        difficulty = diff;
+        currentGrade = parseInt(document.getElementById('grade-level').value);
+        initSurvivors(mode);
+        
+        document.getElementById('intro-screen').style.display = 'none';
+        document.getElementById('equation-lobby').style.display = 'none';
+        document.getElementById('geometry-lobby').style.display = 'none';
+        document.getElementById('speed-lobby').style.display = 'none';
+        document.getElementById('test-container').style.display = 'block';
+        
+        let modeLabel = "練習模式";
+        if(mode === 'TEAM') modeLabel = "死亡團隊對戰";
+        if(mode === 'FFA') modeLabel = "全民自由對抗";
+        if(mode === 'EQUATION') modeLabel = `方程訓練 (${diff})`;
+        if(mode === 'GEOMETRY') modeLabel = `幾何訓練 (${diff})`;
+        if(mode === 'SPEED') modeLabel = `速度訓練 (${diff})`;
+
+        if(['EQUATION', 'GEOMETRY', 'SPEED'].includes(mode)) {
+            document.getElementById('survival-panel').style.display = 'none';
+        } else {
+            document.getElementById('survival-panel').style.display = 'block';
+        }
+        document.getElementById('mode-display').innerText = modeLabel;
+        
+        score = 0; health = 100; questionCount = 0;
+        updateUI();
+        nextQuestion();
+    }
+
+    function initSurvivors(mode) {
+        survivors = [{ name: "你 (Player)", isMe: true, team: 'BLUE', alive: true, score: 0 }];
+        if(['EQUATION', 'GEOMETRY', 'SPEED'].includes(mode)) return;
+
+        const names = ["狙擊手", "數學王", "小王子", "答題人", "智多星", "運算家", "快手"];
+        for(let i=0; i<7; i++) {
+            survivors.push({
+                name: names[i] + " (AI)",
+                isMe: false,
+                team: mode === 'TEAM' ? (i < 3 ? 'BLUE' : 'RED') : 'NONE',
+                alive: true,
+                score: Math.floor(Math.random() * 50)
+            });
+        }
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        timerWidth = 100;
+        let speed = 0.8 + (currentGrade * 0.1);
+        
+        if(currentMode === 'EQUATION' || currentMode === 'GEOMETRY') {
+            speed = difficulty === 'HARD' ? 1.5 : (difficulty === 'MEDIUM' ? 1.0 : 0.7);
+        } else if(currentMode === 'SPEED') {
+            // 速度模式時間更緊湊
+            speed = difficulty === 'HARD' ? 4.5 : (difficulty === 'MEDIUM' ? 3.0 : 1.8);
+        }
+        
+        timerInterval = setInterval(() => {
+            timerWidth -= speed; 
+            document.getElementById('timer-bar').style.width = timerWidth + '%';
+            if (timerWidth <= 0) {
+                clearInterval(timerInterval);
+                handleMistake("檢查點超時！");
+            }
+        }, 100);
+    }
+
+    function nextQuestion() {
+        if (currentMode === 'PRACTICE' && score >= 1000) return victory("練習達成！");
+        if (currentMode === 'EQUATION' && questionCount >= 10) {
+            equationLevel++;
+            localStorage.setItem('math_fps_eq_level', equationLevel);
+            return victory(`晉級：${EQ_TITLES[Math.min(equationLevel, EQ_TITLES.length-1)]}`);
+        }
+        if (currentMode === 'GEOMETRY' && questionCount >= 10) {
+            geometryLevel++;
+            localStorage.setItem('math_fps_geo_level', geometryLevel);
+            return victory(`晉級：${GEO_TITLES[Math.min(geometryLevel, GEO_TITLES.length-1)]}`);
+        }
+        if (currentMode === 'SPEED' && questionCount >= 10) {
+            speedLevel++;
+            localStorage.setItem('math_fps_speed_level', speedLevel);
+            return victory(`晉級：${SPEED_TITLES[Math.min(speedLevel, SPEED_TITLES.length-1)]}`);
+        }
+        
+        let qText = "", answer = 0;
+
+        if(currentMode === 'EQUATION') {
+            if(difficulty === 'EASY') {
+                let a = Math.floor(Math.random()*20)+1, x = Math.floor(Math.random()*15)+1;
+                qText = Math.random() > 0.5 ? `x + ${a} = ${x + a}` : `x - ${a} = ${x - a}`; answer = x;
+            } else if(difficulty === 'MEDIUM') {
+                let a = Math.floor(Math.random()*8)+2, b = Math.floor(Math.random()*20)+1, x = Math.floor(Math.random()*10)+1;
+                qText = `${a}x + ${b} = ${a*x + b}`; answer = x;
+            } else {
+                let a = Math.floor(Math.random()*5)+5, b = Math.floor(Math.random()*10)+1, c = Math.floor(Math.random()*3)+2, x = Math.floor(Math.random()*10)+1;
+                let d = (a * x - b) - (c * x);
+                qText = `${a}x - ${b} = ${c}x ${d >= 0 ? '+ ' + d : '- ' + Math.abs(d)}`; answer = x;
+            }
+        } else if(currentMode === 'GEOMETRY') {
+            if(difficulty === 'EASY') {
+                let w = Math.floor(Math.random()*10)+2, h = Math.floor(Math.random()*10)+2;
+                if(Math.random()>0.5) { qText = `長方形長 ${w}cm，寬 ${h}cm。求面積？`; answer = w * h; }
+                else { qText = `正方形邊長 ${w}cm。求周長？`; answer = w * 4; }
+            } else if(difficulty === 'MEDIUM') {
+                let b = Math.floor(Math.random()*10)+4, h = Math.floor(Math.random()*10)+4;
+                if(Math.random()>0.5) { qText = `三角形底 ${b}cm，高 ${h}cm。求面積？`; answer = (b * h) / 2; }
+                else { 
+                    let top = Math.floor(Math.random()*5)+2;
+                    qText = `梯形上底 ${top}cm，下底 ${b}cm，高 ${h}cm。求面積？`; answer = ((top + b) * h) / 2; 
+                }
+            } else {
+                let l = Math.floor(Math.random()*5)+2, w = Math.floor(Math.random()*5)+2, h = Math.floor(Math.random()*5)+2;
+                if(Math.random()>0.5) { qText = `長方體長闊高分別為 ${l}, ${w}, ${h}cm。求體積？`; answer = l * w * h; }
+                else { qText = `正方體邊長 ${l}cm。求表面積？`; answer = l * l * 6; }
+            }
+        } else if(currentMode === 'SPEED') {
+            if(difficulty === 'EASY') {
+                let a = Math.floor(Math.random()*30)+1, b = Math.floor(Math.random()*30)+1;
+                if(Math.random()>0.5) { qText = `${a} + ${b} = ?`; answer = a + b; }
+                else { qText = `${a+b} - ${a} = ?`; answer = b; }
+            } else if(difficulty === 'MEDIUM') {
+                let a = Math.floor(Math.random()*12)+2, b = Math.floor(Math.random()*9)+2;
+                if(Math.random()>0.5) { qText = `${a} × ${b} = ?`; answer = a * b; }
+                else { qText = `${a*b} ÷ ${a} = ?`; answer = b; }
+            } else {
+                let a = Math.floor(Math.random()*20)+10, b = Math.floor(Math.random()*20)+10, c = Math.floor(Math.random()*10)+5;
+                qText = `(${a} + ${b}) - ${c} = ?`; answer = (a + b) - c;
+            }
+        } else {
+            // 原有年級邏輯
+            if (currentGrade <= 2) {
+                let a = Math.floor(Math.random()*20)+5, b = Math.floor(Math.random()*20)+5;
+                if(Math.random()>0.5) { qText = `${a} + ${b} = ?`; answer = a + b; }
+                else { qText = `${a+b} - ${a} = ?`; answer = b; }
+            } else if (currentGrade <= 4) {
+                let a = Math.floor(Math.random()*12)+2, b = Math.floor(Math.random()*12)+2;
+                qText = `${a} × ${b} = ?`; answer = a * b;
+            } else {
+                let heads = Math.floor(Math.random()*10)+10, rabbits = Math.floor(Math.random()*5)+3;
+                let legs = rabbits * 4 + (heads - rabbits) * 2;
+                answer = rabbits;
+                qText = `籠中有雞兔共 ${heads} 隻，腳共 ${legs} 隻。請問兔有幾隻？`;
+            }
+        }
+
+        document.getElementById('question-area').innerText = qText;
+        generateOptions(answer);
+        startTimer();
+    }
+
+    function generateOptions(correct) {
+        let opts = [correct];
+        while(opts.length < 4) {
+            let offset = (Math.random() > 0.5 ? 1 : -1) * (Math.floor(Math.random()*5)+1);
+            let w = correct + offset;
+            if(w < 0) w = correct + Math.abs(offset) + 2;
+            if(!opts.includes(w)) opts.push(w);
+        }
+        opts.sort(() => Math.random() - 0.5);
+        document.getElementById('options-area').innerHTML = opts.map(o => `
+            <button class="option-btn" onclick="checkAnswer(${o}, ${correct})">${o}</button>
+        `).join('');
+    }
+
+    function checkAnswer(sel, correct) {
+        clearInterval(timerInterval);
+        if (sel === correct) {
+            score += 25;
+            questionCount++;
+            triggerFlash('flash-green');
+            addLog("✔️ 通過檢查點！");
+            if (!['PRACTICE', 'EQUATION', 'GEOMETRY', 'SPEED'].includes(currentMode)) simulateElimination();
+            updateUI();
+            if (checkGameOver()) return;
+            nextQuestion();
+        } else {
+            handleMistake("答錯被淘汰！");
+        }
+    }
+
+    function handleMistake(msg) {
+        health = 0;
+        triggerFlash('flash-red');
+        addLog(`❌ ${msg}`);
+        updateUI();
+        setTimeout(() => defeat(msg), 800);
+    }
+
+    function simulateElimination() {
+        let targets = survivors.filter(s => !s.isMe && s.alive);
+        if (currentMode === 'TEAM') {
+            let enemies = targets.filter(s => s.team === 'RED');
+            if (enemies.length > 0) {
+                let victim = enemies[Math.floor(Math.random() * enemies.length)];
+                victim.alive = false;
+                addLog(`💀 [淘汰] 隊友擊殺了敵方：${victim.name.split(' ')[0]}`);
+            }
+        } else if (currentMode === 'FFA') {
+            if (targets.length > 0) {
+                let victim = targets[Math.floor(Math.random() * targets.length)];
+                victim.alive = false;
+                addLog(`💀 [淘汰] 隨機淘汰：${victim.name.split(' ')[0]}`);
+            }
+        }
+        survivors.forEach(s => { if(!s.isMe && s.alive) s.score += Math.floor(Math.random()*20); });
+        const overlay = document.getElementById('checkpoint-overlay');
+        overlay.style.display = 'flex';
+        setTimeout(() => overlay.style.display = 'none', 600);
+    }
+
+    function checkGameOver() {
+        if (currentMode === 'FFA') {
+            const aliveAIs = survivors.filter(s => !s.isMe && s.alive).length;
+            if (aliveAIs === 0) { victory("最後倖存者！"); return true; }
+        } else if (currentMode === 'TEAM') {
+            const redAlive = survivors.filter(s => s.team === 'RED' && s.alive).length;
+            if (redAlive === 0) { victory("紅隊全滅，藍隊勝利！"); return true; }
+        }
+        return false;
+    }
+
+    function updateUI() {
+        document.getElementById('score-label').innerText = `積分: ${score}`;
+        const isTrainer = ['EQUATION', 'GEOMETRY', 'SPEED'].includes(currentMode);
+        document.getElementById('health-label').innerText = isTrainer ? `進度: ${questionCount} / 10` : `生命值: ${health}`;
+        
+        const rankList = document.getElementById('ranking-list');
+        const sorted = [...survivors].sort((a,b) => (b.isMe ? score : b.score) - (a.isMe ? score : a.score));
+        rankList.innerHTML = sorted.map((p, i) => `
+            <div class="flex justify-between text-xs p-1 ${p.isMe ? 'text-yellow-400 font-bold bg-white/10 rounded' : 'opacity-60'}">
+                <span>${i+1}. ${p.name}</span>
+                <span>${p.isMe ? score : p.score}</span>
+            </div>
+        `).join('');
+
+        const survList = document.getElementById('survival-list');
+        survList.innerHTML = survivors.map(s => `
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full ${s.alive ? (s.team === 'RED' ? 'bg-red-500' : (s.team === 'BLUE' ? 'bg-blue-500' : 'bg-green-500')) : 'bg-gray-700 shadow-inner'}"></div>
+                <span class="${s.alive ? '' : 'line-through opacity-30'}">${s.name}</span>
+            </div>
+        `).join('');
+    }
+
+    function addLog(msg) {
+        const container = document.getElementById('log-container');
+        const div = document.createElement('div');
+        div.className = "mb-1 border-l-2 border-yellow-400 pl-2";
+        div.innerText = msg;
+        container.prepend(div);
+    }
+
+    function triggerFlash(cls) {
+        document.body.classList.remove('flash-red', 'flash-green');
+        void document.body.offsetWidth;
+        document.body.classList.add(cls);
+    }
+
+    function victory(msg) {
+        clearInterval(timerInterval);
+        const isTrainer = ['EQUATION', 'GEOMETRY', 'SPEED'].includes(currentMode);
+        const bonus = (currentMode === 'PRACTICE' || isTrainer) ? 0 : 200;
+        const totalPoints = score + bonus;
+        rankPoints += totalPoints;
+        if(totalPoints > highScore) { highScore = totalPoints; localStorage.setItem('math_fps_highscore_v3', highScore); }
+        localStorage.setItem('math_fps_rank', rankPoints);
+        
+        document.getElementById('result-title').innerText = "MISSION COMPLETE";
+        document.getElementById('result-title').className = "text-3xl font-black mb-2 text-green-400 italic";
+        document.getElementById('result-msg').innerText = msg;
+        document.getElementById('result-stats').innerHTML = `
+            <div>結算得分: ${score}</div>
+            <div class="mt-2 pt-2 border-t border-white/20 text-yellow-400 font-bold">總計排名積分: +${totalPoints}</div>
+        `;
+        document.getElementById('win-modal').style.display = 'flex';
+    }
+
+    function defeat(msg) {
+        clearInterval(timerInterval);
+        rankPoints = Math.max(0, rankPoints - 30);
+        localStorage.setItem('math_fps_rank', rankPoints);
+        document.getElementById('result-title').innerText = "ELIMINATED";
+        document.getElementById('result-title').className = "text-3xl font-black mb-2 text-red-500 italic";
+        document.getElementById('result-msg').innerText = msg;
+        document.getElementById('result-stats').innerHTML = `
+            <div>結算積分: ${score}</div>
+            <div class="text-red-400">排名積分扣除: -30</div>
+        `;
+        document.getElementById('win-modal').style.display = 'flex';
+    }
+
+    function showBackHomeConfirm() { if(confirm("確定退出？將損失本場積分。")) goHome(); }
+    
+    function goHome() {
+        clearInterval(timerInterval);
+        document.getElementById('win-modal').style.display = 'none';
+        document.getElementById('test-container').style.display = 'none';
+        document.getElementById('equation-lobby').style.display = 'none';
+        document.getElementById('geometry-lobby').style.display = 'none';
+        document.getElementById('speed-lobby').style.display = 'none';
+        document.getElementById('intro-screen').style.display = 'flex';
+        updateRankUI();
+    }
+
+    updateRankUI();
+</script>
+</body>
+</html>
