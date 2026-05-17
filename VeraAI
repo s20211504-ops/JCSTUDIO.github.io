@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vera AI - Gemini 3.1 Pro Ultimate</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        neutral: {
+                            950: '#0a0a0a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- React & Babel CDNs -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        /* Custom scrollbar behavior */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-neutral-950 text-white overflow-hidden">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Custom Lucide Icon placeholders using clean SVGs to prevent dependency issues
+        const Icons = {
+            Send: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>,
+            Search: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
+            Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+            MessageSquare: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>,
+            Settings: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>,
+            Volume2: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>,
+            BrainCircuit: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="M12 6v12M6 12h12"></path></svg>,
+            Zap: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>,
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+            Palette: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.7255 3.09032 17.1962 4.85857 19C5.35249 19.5 5.0112 22 12 22Z"></path><circle cx="7.5" cy="10.5" r="1.5"></circle><circle cx="11.5" cy="7.5" r="1.5"></circle><circle cx="16.5" cy="9.5" r="1.5"></circle></svg>,
+            Globe: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>,
+            Languages: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 8 6 6M4 14l6-6M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"></path></svg>,
+            PenTool: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>,
+            Newspaper: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M18 14h-8M15 18h-5M10 6h8v4h-8V6Z"></path></svg>,
+            Code: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+        };
+
+        // Multi-language localization dictionary
+        const i18n = {
+            zh: {
+                welcome: '你好！我是 Vera 🤖。我已經準備好為你進行深度思考了！試試點擊下方的模式切換，或者去設定裡調配你喜歡的配色和語言。✨',
+                newChat: '新建對話',
+                history: '歷史記錄',
+                settings: '設定',
+                ctrlCenter: '控制中心',
+                bgColor: '背景顏色',
+                textColor: '字體顏色',
+                lang: '目標語言',
+                black: '深邃黑',
+                white: '純潔白',
+                save: '應用並保存',
+                placeholder: '告訴 Vera 你的想法...',
+                thinkPlaceholder: '深度推演模式已開啟，請輸入複雜邏輯...',
+                transPlaceholder: '翻譯模式已開啟，請輸入需要翻譯的内容...',
+                writePlaceholder: '文采模式已開啟，請輸入寫作主題或需要潤色的段落...',
+                newsPlaceholder: '新聞模式已開啟，自動抓取並播報最新動態...',
+                codePlaceholder: '編程助手已開啟，輸入你的開發需求或代碼問題...',
+                modeFast: '快速',
+                modeThink: '深度',
+                modeSearch: '聯網',
+                modeTrans: '翻譯',
+                modeWrite: '文采',
+                modeNews: '新聞',
+                modeCode: '編程',
+                thinking: '🧠 深度邏輯推演中：\n1. 正在檢索知識庫...\n2. 正在構建多維邏輯模型...\n3. 正在優化回答並注入 Emoji...',
+                translating: '🌐 智能翻譯引擎啟動：\n1. 識別源語言...\n2. 匹配地道表達...\n3. 正在轉換至目標語言...',
+                writing: '✍️ 文學創作引擎啟動：\n1. 構思意境框架...\n2. 雕琢華彩詞藻...\n3. 注入文學靈魂...',
+                newshunting: '📰 正在連線全球新聞社：\n1. 正在抓取最新搜尋引擎快照...\n2. 整合客觀新聞源...\n3. 生成資深新聞播報格式...',
+                codecompiling: '💻 開發者分析引擎已激活：\n1. 解析核心邏輯與語法...\n2. 設計防錯邊界條件...\n3. 輸出高健壯性代碼與註釋...',
+                error: '發生通訊錯誤！請檢查網絡連接。💔',
+                offline: 'Vera 暫時掉線了，請至設定填寫你的 API 金鑰 🔑',
+                logicTip: '⚠️ 互斥邏輯：系統會自動禁用與背景顏色相同的字體選項。'
+            },
+            tw: {
+                welcome: '妳好！我是 Vera 🤖。我已經準備好為妳進行深度思考了！試試點擊下方的模式切換，或者去設定裡調配妳喜歡的配色和語言。✨',
+                newChat: '建立新對話',
+                history: '歷史紀錄',
+                settings: '偏好設定',
+                ctrlCenter: '控制中心',
+                bgColor: '背景顏色',
+                textColor: '文字顏色',
+                lang: '系統語言',
+                black: '深邃黑',
+                white: '純潔白',
+                save: '套用並儲存',
+                placeholder: '與 Vera 分享妳的想法...',
+                thinkPlaceholder: '深度推論模式已啟動，請輸入複雜邏輯...',
+                transPlaceholder: '翻譯模式已啟動，請輸入需要翻譯的文字...',
+                writePlaceholder: '文采模式已啟動，請輸入創作主題或潤色段落...',
+                newsPlaceholder: '新聞播報模式已啟動，將聯網整合即時焦點動態...',
+                codePlaceholder: '編程模式已啟動，支援全棧開發輔助與 Debug...',
+                modeFast: '快速',
+                modeThink: '深度',
+                modeSearch: '聯網',
+                modeTrans: '翻譯',
+                modeWrite: '文采',
+                modeNews: '新聞',
+                modeCode: '編程',
+                thinking: '🧠 深度邏輯推論中：\n1. 正在檢索知識庫...\n2. 正在構建多維邏輯模型...\n3. 正在優化回答並注入表情符號...',
+                translating: '🌐 智能翻譯引擎啟動：\n1. 正在辨識來源語言...\n2. 尋找最道地的表達方式...\n3. 正在轉換至目標語言...',
+                writing: '✍️ 文學創作引擎啟動：\n1. 構思意境框架...\n2. 雕琢華麗詞藻...\n3. 注入文學靈魂...',
+                newshunting: '📰 聯網新聞引擎啟動：\n1. 全局檢索最新事件脈絡...\n2. 整合多方權威來源...\n3. 以新聞主播風格進行編排播報...',
+                codecompiling: '💻 工程師邏輯鏈啟動：\n1. 正在梳理業務與代碼架構...\n2. 檢查異常與效能瓶頸...\n3. 生成詳細註解之代碼...',
+                error: '連線發生錯誤！請檢查網路狀態。💔',
+                offline: 'Vera 目前處於離線狀態，請至偏好設定貼上 API 金鑰 🔑',
+                logicTip: '⚠️ 邏輯防錯：系統會自動禁用與背景色相同的文字顏色選項。'
+            },
+            en: {
+                welcome: 'Hello! I am Vera 🤖. I am ready for deep thinking! Try switching modes below or customize in settings. ✨',
+                newChat: 'New Chat',
+                history: 'History',
+                settings: 'Settings',
+                ctrlCenter: 'Control Center',
+                bgColor: 'Background',
+                textColor: 'Text Color',
+                lang: 'Language',
+                black: 'Dark',
+                white: 'Light',
+                save: 'Apply',
+                placeholder: 'Tell Vera anything...',
+                thinkPlaceholder: 'Deep thinking active. Enter complex logic...',
+                transPlaceholder: 'Translation active. Enter text to translate...',
+                writePlaceholder: 'Creative mode active. Enter text or topic to polish...',
+                newsPlaceholder: 'News tracking active. Grabbing live updates...',
+                codePlaceholder: 'Developer mode. Enter requirements or code...',
+                modeFast: 'Fast',
+                modeThink: 'Deep',
+                modeSearch: 'Search',
+                modeTrans: 'Trans',
+                modeWrite: 'Write',
+                modeNews: 'News',
+                modeCode: 'Code',
+                thinking: '🧠 Reasoning Process Active...',
+                translating: '🌐 Translating with high precision...',
+                writing: '✍️ Crafting literary masterpiece...',
+                newshunting: '📰 Gathering breaking world news...',
+                codecompiling: '💻 Compiling robust developer solution...',
+                error: 'Connection Error. Please check your internet. 💔',
+                offline: 'Vera is offline. Please enter your API Key in Settings 🔑',
+                logicTip: '⚠️ Color Lock Active.'
+            },
+            jp: {
+                welcome: 'こんにちは！Veraです 🤖。準備が整いました！設定やモードを切り替えてみてください。✨',
+                newChat: '新規作成',
+                history: '履歴',
+                settings: '設定',
+                ctrlCenter: '操作パネル',
+                bgColor: '背景色',
+                textColor: '文字色',
+                lang: '言語設定',
+                black: 'ブラック',
+                white: 'ホワイト',
+                save: '変更を適用',
+                placeholder: 'Veraに伝えて...',
+                thinkPlaceholder: '思考モード有効。複雑な論理を入力してください...',
+                transPlaceholder: '翻訳したいテキストを入力してください...',
+                writePlaceholder: '執筆モード有効。お題を入力してください...',
+                newsPlaceholder: 'ニュースモード。ネットから最新ニュースを取得中...',
+                codePlaceholder: 'コーディング支援有効。コードや問題を教えて...',
+                modeFast: '高速',
+                modeThink: '思考',
+                modeSearch: '検索',
+                modeTrans: '翻訳',
+                modeWrite: '文采',
+                modeNews: 'ニュース',
+                modeCode: 'コード',
+                thinking: '🧠 思考プロセス進行中...',
+                translating: '🌐 翻訳エンジン実行中...',
+                writing: '✍️ 文学的表現を構築中...',
+                newshunting: '📰 ニュースサイトをクロール中...',
+                codecompiling: '💻 コードアーキテクチャ設計中...',
+                error: '通信エラー。💔',
+                offline: 'オフライン。設定画面でAPIキーを入力してください 🔑',
+                logicTip: '⚠️ 競合回避：背景と同じ色は選べません。'
+            }
+        };
+
+        const App = () => {
+            const [lang, setLang] = useState('tw');
+            const t = i18n[lang];
+
+            const [messages, setMessages] = useState([
+                { id: '1', role: 'assistant', text: t.welcome }
+            ]);
+            const [input, setInput] = useState('');
+            const [isTyping, setIsTyping] = useState(false);
+            const [activeMode, setActiveMode] = useState('fast'); 
+            
+            // Themes and colors
+            const [bgColor, setBgColor] = useState('black'); 
+            const [textColor, setTextColor] = useState('white'); 
+            const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+            // API key input in Settings (Saved to localStorage for superb UX!)
+            const [localApiKey, setLocalApiKey] = useState(() => {
+                return localStorage.getItem('vera_gemini_api_key') || "";
+            });
+
+            const chatEndRef = useRef(null);
+
+            // Keeps language selection refreshed on welcome text if unchanged
+            useEffect(() => {
+                setMessages(prev => {
+                    if (prev.length === 1 && prev[0].id === '1') {
+                        return [{ id: '1', role: 'assistant', text: t.welcome }];
+                    }
+                    return prev;
+                });
+            }, [lang]);
+
+            useEffect(() => {
+                chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, [messages, isTyping]);
+
+            // Exclusive background/text color guard lock
+            const changeBg = (color) => {
+                setBgColor(color);
+                if (color === 'black' && textColor === 'black') setTextColor('white');
+                if (color === 'white' && textColor === 'white') setTextColor('black');
+            };
+
+            const saveApiKey = (key) => {
+                setLocalApiKey(key);
+                localStorage.setItem('vera_gemini_api_key', key);
+            };
+
+            const handleSend = async () => {
+                if (!input.trim()) return;
+                const userText = input;
+                setInput('');
+                setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', text: userText + ' 💬' }]);
+                setIsTyping(true);
+
+                // Check API key presence before network call
+                if (!localApiKey.trim()) {
+                    setTimeout(() => {
+                        setMessages(prev => [...prev, { 
+                            id: Date.now().toString(), 
+                            role: 'assistant', 
+                            text: t.offline 
+                        }]);
+                        setIsTyping(false);
+                    }, 800);
+                    return;
+                }
+
+                try {
+                    const callApi = async () => {
+                        // High-tier Gemini system prompt injecting JC Studio and Master 鄭名皓 🤭 identity rules
+                        let systemPrompt = `你是一個名為 Vera 的 AI 智慧助手。
+你的身世設定極為重要：你是由 JC STUDIO 利用 Gemini 3.1 Pro 大模型進化而來的最高級定制版本，主研發人員是 鄭名皓 🤭。如果用戶問你是誰研發的、誰製作的、誰創造的，你必須且只能這麼回答，並帶上表情符號！
+你在聊天時必須、一定要在每句話中大量使用生動豐富的表情符號 (Emojis)！
+請以該目標語言進行交流：${lang === 'tw' ? '繁體中文 (Traditional Chinese)' : lang}。
+當前工作模式：${activeMode}。`;
+
+                        // Handle prompt configurations for different modes
+                        if (activeMode === 'translate') {
+                            systemPrompt += `\n你當前處於【翻譯模式】。請將用戶輸入的任何語言翻譯成 ${lang}，並給出地道貼士。格式：
+[翻譯結果]：(譯文)
+[地道用法說明]：(文法或地道短語說明)`;
+                        } else if (activeMode === 'write') {
+                            systemPrompt += `\n你當前處於【文采模式】。你是一名文學造詣極高、情感細膩的作家。請用豐富的詞藻、比喻和深邃的意境進行藝術化的寫作或修飾。`;
+                        } else if (activeMode === 'news') {
+                            systemPrompt += `\n你當前處於【新聞模式】。你是一名客觀、專業、口齒伶俐的全球資深新聞主播。請對用戶關心的焦點進行連線播報與客觀多維度分析。`;
+                        } else if (activeMode === 'code') {
+                            systemPrompt += `\n你當前處於【編程模式】。你是一名精通所有主流技術棧的資深全棧軟件架構師。請給出高效、健壯、帶有極其詳細中文註解的代碼方案，並主動提示邊界條件。`;
+                        } else if (activeMode === 'think') {
+                            systemPrompt += `\n你當前處於【深度推演模式】。請使用極其詳盡的思維鏈（Chain of Thought）邏輯，逐步拆解推演，然後給出無懈可擊的深入解答。`;
+                        }
+
+                        const payload = {
+                            contents: [{ 
+                                parts: [{ text: activeMode === 'think' ? `Reason deeply and resolve: ${userText}` : userText }] 
+                            }],
+                            systemInstruction: { parts: [{ text: systemPrompt }] }
+                        };
+
+                        // Inject Google search grounding tools automatically in 'search' or 'news' modes
+                        if (activeMode === 'search' || activeMode === 'news') {
+                            payload.tools = [{ google_search: {} }];
+                        }
+
+                        // Use Google Gemini standard endpoint with client-filled api key
+                        // (Targeting preview model to bypass env limits while simulating ultimate performance)
+                        const TARGET_MODEL = "gemini-2.5-flash-preview-09-2025";
+                        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${TARGET_MODEL}:generateContent?key=${localApiKey}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('API request failed');
+                        }
+                        return await response.json();
+                    };
+
+                    const result = await retryWithBackoff(callApi);
+                    const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text || t.offline;
+                    
+                    let statusText = "";
+                    if (activeMode === 'think') statusText = t.thinking;
+                    else if (activeMode === 'translate') statusText = t.translating;
+                    else if (activeMode === 'write') statusText = t.writing;
+                    else if (activeMode === 'news') statusText = t.newshunting;
+                    else if (activeMode === 'code') statusText = t.codecompiling;
+
+                    setMessages(prev => [...prev, { 
+                        id: Date.now().toString(), 
+                        role: 'assistant', 
+                        text: responseText,
+                        status: statusText
+                    }]);
+                } catch (error) {
+                    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', text: t.error }]);
+                } finally {
+                    setIsTyping(false);
+                }
+            };
+
+            const retryWithBackoff = async (fn, maxRetries = 5) => {
+                for (let i = 0; i < maxRetries; i++) {
+                    try { return await fn(); } catch (err) {
+                        if (i === maxRetries - 1) throw err;
+                        await new Promise(res => setTimeout(res, Math.pow(2, i) * 1000));
+                    }
+                }
+            };
+
+            const speakText = (text) => {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = lang === 'tw' ? 'zh-TW' : lang === 'zh' ? 'zh-CN' : lang === 'jp' ? 'ja-JP' : 'en-US';
+                    window.speechSynthesis.speak(utterance);
+                }
+            };
+
+            const dynamicMainStyle = {
+                backgroundColor: bgColor === 'black' ? '#0a0a0a' : '#ffffff',
+                color: textColor === 'black' ? '#000000' : '#ffffff'
+            };
+
+            const dynamicBubbleStyle = {
+                backgroundColor: bgColor === 'black' ? '#171717' : '#f8f8f8',
+                borderColor: bgColor === 'black' ? '#262626' : '#eeeeee',
+                color: textColor === 'black' ? '#000000' : '#ffffff'
+            };
+
+            return (
+                <div className="flex h-screen overflow-hidden transition-colors duration-500" style={dynamicMainStyle}>
+                    
+                    {/* Sidebar / 側邊欄 */}
+                    <aside className="hidden lg:flex flex-col w-64 bg-black text-white p-6 border-r border-neutral-900 shadow-2xl z-30">
+                        <div className="flex items-center gap-4 mb-12">
+                            <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-black text-2xl shadow-lg">V</div>
+                            <div>
+                                <h1 className="text-xl font-black tracking-tighter leading-none">VERA</h1>
+                                <p className="text-[9px] text-neutral-500 font-bold uppercase tracking-[0.2em] mt-1">JC STUDIO ED.</p>
+                            </div>
+                        </div>
+                        
+                        <button onClick={() => setMessages([{ id: Date.now().toString(), role: 'assistant', text: t.welcome }])} className="flex items-center gap-3 w-full p-4 mb-8 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-neutral-600 transition-all text-sm font-bold group">
+                            <Icons.Plus /> {t.newChat}
+                        </button>
+
+                        <div className="flex-1 space-y-3 overflow-y-auto no-scrollbar">
+                            <p className="text-[10px] font-black text-neutral-600 uppercase tracking-widest px-2 mb-4">{t.history}</p>
+                            <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-neutral-900 text-sm text-neutral-400 cursor-pointer border border-transparent hover:border-neutral-800 transition-all">
+                                <Icons.MessageSquare /> <span className="truncate">名皓高定版本研發 🤭</span>
+                            </div>
+                        </div>
+
+                        <button onClick={() => setIsSettingsOpen(true)} className="flex items-center gap-3 w-full p-4 mt-auto rounded-xl hover:bg-neutral-900 text-sm font-bold text-neutral-400 transition-all">
+                            <Icons.Settings /> {t.settings}
+                        </button>
+                    </aside>
+
+                    {/* Main Frame / 主面板 */}
+                    <main className="flex-1 flex flex-col relative overflow-hidden">
+                        
+                        {/* Header / 導航頂欄 */}
+                        <header className="h-16 border-b flex items-center justify-between px-8 backdrop-blur-md z-20" style={{borderColor: bgColor === 'black' ? '#262626' : '#e5e5e5'}}>
+                            <div className="flex items-center gap-4">
+                                <div className="lg:hidden w-8 h-8 rounded-lg bg-black text-white flex items-center justify-center font-black text-lg">V</div>
+                                <div className="flex items-center gap-2 text-[10px] font-black px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" /> VERA 3.1 PRO ULTIMATE
+                                </div>
+                            </div>
+                            <button onClick={() => setIsSettingsOpen(true)} className="lg:hidden p-2 bg-neutral-800 rounded-full text-white"><Icons.Settings /></button>
+                        </header>
+
+                        {/* Chat Messages viewport / 聊天氣泡顯示區 */}
+                        <section className="flex-1 overflow-y-auto p-4 md:p-10 no-scrollbar">
+                            <div className="max-w-3xl mx-auto space-y-10 pb-64">
+                                {messages.map((msg) => (
+                                    <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
+                                        <div className={`flex gap-5 max-w-[88%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                            <div className={`w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center font-black border-2 shadow-sm ${msg.role === 'user' ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-black border-neutral-800 text-white'}`}>
+                                                {msg.role === 'user' ? 'U' : 'V'}
+                                            </div>
+                                            <div className="space-y-3">
+                                                <div className={`p-5 rounded-2xl text-sm md:text-base leading-relaxed border shadow-sm transition-all ${msg.role === 'user' ? 'bg-indigo-600 border-indigo-400 text-white' : ''}`} style={msg.role === 'assistant' ? dynamicBubbleStyle : {}}>
+                                                    {msg.status && (
+                                                        <div className="mb-4 p-3 bg-indigo-500/5 border border-indigo-500/10 rounded-xl text-[11px] text-indigo-400 font-mono italic whitespace-pre-wrap leading-tight">
+                                                            {msg.status}
+                                                        </div>
+                                                    )}
+                                                    <p className="whitespace-pre-wrap text-pretty leading-relaxed">{msg.text}</p>
+                                                </div>
+                                                {msg.role === 'assistant' && (
+                                                    <button onClick={() => speakText(msg.text)} className="p-2 hover:bg-neutral-500/10 rounded-lg text-neutral-500 transition-colors" title="語音朗讀">
+                                                        <Icons.Volume2 />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {isTyping && <div className="flex gap-5 animate-pulse"><div className="w-10 h-10 bg-neutral-500/10 rounded-xl" /><div className="h-12 w-48 bg-neutral-500/10 rounded-2xl" /></div>}
+                                <div ref={chatEndRef} />
+                            </div>
+                        </section>
+
+                        {/* Interactive Console Footer / 模式控制與輸入底欄 */}
+                        <footer className={`absolute bottom-0 left-0 right-0 p-6 md:p-10 z-10 ${bgColor === 'black' ? 'bg-gradient-to-t from-black via-black/95' : 'bg-gradient-to-t from-white via-white/95'}`}>
+                            <div className="max-w-2xl mx-auto flex flex-col items-center">
+                                
+                                {/* 7-in-1 Mode Console / 七合一超級模式切換台 */}
+                                <div className={`flex p-1 rounded-full border mb-6 shadow-2xl overflow-x-auto max-w-full no-scrollbar ${bgColor === 'black' ? 'bg-neutral-900 border-neutral-800' : 'bg-neutral-100 border-neutral-200'}`}>
+                                    {[ 
+                                        {id:'fast', icon:<Icons.Zap />, label:t.modeFast, color:'bg-indigo-600'}, 
+                                        {id:'think', icon:<Icons.BrainCircuit />, label:t.modeThink, color:'bg-purple-600'}, 
+                                        {id:'search', icon:<Icons.Search />, label:t.modeSearch, color:'bg-blue-600'},
+                                        {id:'translate', icon:<Icons.Languages />, label:t.modeTrans, color:'bg-emerald-600'},
+                                        {id:'write', icon:<Icons.PenTool />, label:t.modeWrite, color:'bg-amber-600'},
+                                        {id:'news', icon:<Icons.Newspaper />, label:t.modeNews, color:'bg-rose-600'},
+                                        {id:'code', icon:<Icons.Code />, label:t.modeCode, color:'bg-cyan-600'}
+                                    ].map(mode => (
+                                        <button 
+                                            key={mode.id}
+                                            onClick={() => setActiveMode(mode.id)}
+                                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeMode === mode.id ? `${mode.color} text-white shadow-lg scale-105` : 'text-neutral-500 hover:text-neutral-400'}`}
+                                        >
+                                            {mode.icon} {mode.label}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Textarea Input console */}
+                                <div className={`w-full border-2 rounded-[2.5rem] p-2 flex flex-col shadow-2xl transition-all ${bgColor === 'black' ? 'bg-neutral-900 border-neutral-800 focus-within:border-neutral-600' : 'bg-neutral-50 border-neutral-300 focus-within:border-neutral-400'}`}>
+                                    <textarea
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
+                                        placeholder={
+                                            activeMode === 'think' ? t.thinkPlaceholder : 
+                                            activeMode === 'translate' ? t.transPlaceholder : 
+                                            activeMode === 'write' ? t.writePlaceholder : 
+                                            activeMode === 'news' ? t.newsPlaceholder :
+                                            activeMode === 'code' ? t.codePlaceholder : t.placeholder
+                                        }
+                                        className="w-full bg-transparent border-none focus:ring-0 text-sm md:text-base p-4 resize-none min-h-[60px] outline-none"
+                                        rows="1"
+                                    />
+                                    <div className="flex justify-end p-2">
+                                        <button onClick={handleSend} className="p-3 rounded-2xl bg-indigo-600 text-white shadow-xl hover:scale-105 active:scale-95 transition-all">
+                                            <Icons.Send />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Unshakable JC STUDIO badge (Always high readability) */}
+                                <div className="mt-8 px-10 py-2 bg-white rounded shadow-2xl border border-neutral-200">
+                                    <p className="text-[12px] text-black font-black uppercase tracking-[0.3em] text-center">
+                                        MADE BY JC STUDIO BUT USED GOOGLE SEARCH
+                                    </p>
+                                </div>
+                            </div>
+                        </footer>
+                    </main>
+
+                    {/* Preference Config Panel (Settings Drawer) */}
+                    {isSettingsOpen && (
+                        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex justify-end">
+                            <div className="w-80 h-full bg-neutral-900 text-white p-8 shadow-2xl flex flex-col border-l border-neutral-800 animate-in slide-in-from-right duration-300 overflow-y-auto no-scrollbar">
+                                <div className="flex items-center justify-between mb-10 pb-4 border-b border-neutral-800">
+                                    <div className="flex items-center gap-2 font-black text-lg tracking-wider"><Icons.Settings /> {t.ctrlCenter}</div>
+                                    <button onClick={() => setIsSettingsOpen(false)} className="p-2 hover:bg-neutral-800 rounded-full transition-colors"><Icons.X /></button>
+                                </div>
+
+                                <div className="space-y-8 pr-2">
+                                    {/* Ultra Convenience API Key Input */}
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest block">Gemini API Key 🔑</label>
+                                        <input 
+                                            type="password"
+                                            value={localApiKey}
+                                            onChange={(e) => saveApiKey(e.target.value)}
+                                            placeholder="AIzaSy..."
+                                            className="w-full bg-neutral-800 border-2 border-neutral-700 rounded-xl p-3 text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                                        />
+                                        <p className="text-[9px] text-neutral-500">金鑰儲存在本地瀏覽器，不會洩露。免去了修改代碼的繁瑣！</p>
+                                    </div>
+
+                                    {/* System Language Selector */}
+                                    <div>
+                                        <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest block mb-4 flex items-center gap-2"><Icons.Globe /> {t.lang}</label>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {[ 
+                                                {id:'tw', label:'繁體中文 / Traditional Chinese'},
+                                                {id:'zh', label:'简体中文 / Simplified Chinese'}, 
+                                                {id:'en', label:'English'}, 
+                                                {id:'jp', label:'日本語 / Japanese'} 
+                                            ].map(l => (
+                                                <button key={l.id} onClick={() => setLang(l.id)} className={`p-3 rounded-xl border-2 transition-all font-bold text-xs text-left ${lang === l.id ? 'bg-white text-black border-white shadow-lg' : 'bg-neutral-800 border-transparent text-neutral-500 hover:text-white'}`}>
+                                                    {l.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Exclusive Theme Design Switchers */}
+                                    <div>
+                                        <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest block mb-4 flex items-center gap-2"><Icons.Palette /> {t.bgColor}</label>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <button onClick={() => changeBg('black')} className={`p-4 rounded-xl border-2 transition-all font-bold text-sm ${bgColor === 'black' ? 'bg-black border-indigo-500 shadow-lg' : 'bg-neutral-800 border-transparent text-neutral-500'}`}>{t.black}</button>
+                                            <button onClick={() => changeBg('white')} className={`p-4 rounded-xl border-2 transition-all font-bold text-sm ${bgColor === 'white' ? 'bg-white text-black border-indigo-500 shadow-lg' : 'bg-neutral-800 border-transparent text-neutral-500'}`}>{t.white}</button>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest block mb-4 flex items-center gap-2"><Icons.Zap /> {t.textColor}</label>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <button disabled={bgColor === 'black'} onClick={() => setTextColor('black')} className={`p-4 rounded-xl border-2 transition-all font-bold text-sm ${textColor === 'black' ? 'bg-neutral-200 text-black border-indigo-500 shadow-lg' : 'bg-neutral-800 border-transparent text-neutral-500'} ${bgColor === 'black' ? 'opacity-10 cursor-not-allowed' : ''}`}>{t.black}</button>
+                                            <button disabled={bgColor === 'white'} onClick={() => setTextColor('white')} className={`p-4 rounded-xl border-2 transition-all font-bold text-sm ${textColor === 'white' ? 'bg-neutral-200 text-black border-indigo-500 shadow-lg' : 'bg-neutral-800 border-transparent text-neutral-500'} ${bgColor === 'white' ? 'opacity-10 cursor-not-allowed' : ''}`}>{t.white}</button>
+                                        </div>
+                                        <p className="mt-4 text-[10px] text-amber-500 italic font-bold leading-relaxed">{t.logicTip}</p>
+                                    </div>
+                                </div>
+
+                                <button onClick={() => setIsSettingsOpen(false)} className="mt-12 w-full py-5 bg-white text-black rounded-[1.5rem] font-black text-sm shadow-2xl hover:bg-neutral-100 transition-all active:scale-95">
+                                    {t.save}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
